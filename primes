@@ -1,0 +1,185 @@
+
+;; f(0)
+q0 _ _ * halt
+q0 1 1 * q10
+
+
+
+
+;; f(1)
+q10 1 1 r q11
+q11 1 1 l q20
+q11 _ _ l q12
+q12 1 _ * halt
+
+
+
+
+;; f(2)
+q20 1 1 * r0
+q21 1 1 * m10
+q22 1 1 * t0
+
+;; copy; rightmost x will be the x^x that we are constructing.
+r0 _ _ * halt
+r0 1 1 * r1
+r1 1 1 r r1
+r1 _ _ l r100
+r100 1 0 * r101
+r100 _ _ r r300
+r101 0 0 r r101
+r101 1 1 r r101
+r101 _ _ r r102
+r102 1 1 r r102
+r102 _ 1 * r200
+r200 1 1 l r200
+r200 _ _ l r201
+r201 1 1 l r201
+r201 0 1 * r202
+r202 1 1 l r100
+r300 1 1 r r300
+r300 _ _ r q21
+
+; even test
+m10 1 1 r m11
+m11 1 1 r m10
+m10 _ _ * halt
+m11 _ _ l m12
+m12 1 _ l m12
+m12 _ _ l m13
+m13 1 1 l m13
+m13 _ _ r q22
+
+
+
+
+
+;; f(x)
+
+;; set up: write a 3 to the right which we call y
+t0 1 1 r t0
+t0 _ _ r t1
+t1 _ 1 * t1
+t1 1 1 r t2
+t2 _ 1 * t2
+t2 1 1 r t3
+t3 _ 1 * t4
+t4 1 1 l t4
+t4 _ _ l t5
+t5 1 1 l t5
+t5 _ _ r t100
+
+;; if equal, go to clean up
+t100 1 1 * e100
+t101 1 1 
+
+;; equality(x,y)
+e100 0 0 r e100 ; look for next 1 in x
+e100 1 0 * e101 ; found a 1 in x
+e100 _ _ * s0 ; reached end of x, then x=y
+e101 1 1 r e101
+e101 0 0 r e101
+e101 _ _ r e110
+e110 0 0 r e110 ; look for next 1 in y
+e110 1 0 * e120 ; found a 1 in y
+e110 _ _ * e200 ; reached end of y, then x=/=y
+e120 0 0 l e120
+e120 _ _ l e121
+e121 1 1 l e121
+e121 0 0 l e122
+e122 0 0 l e122
+e122 _ _ r e100
+
+;; reached end of y, x=/=y
+;; go back to start of x, converting all 0s to 1s
+e200 _ _ l e201
+e201 0 1 * e202
+e202 1 1 l e201
+e201 _ _ l e203
+e203 1 1 l e203
+e203 0 1 * e203
+e203 _ _ r m100
+
+;; reached end of x, x=y
+;; go to end of y
+;; then go back to start of x, deleting all 0s and 1s
+;; then print a 1 and halt
+s0 _ _ r s1 ; go to end of y
+s1 0 0 r s1
+s1 _ _ l s2
+s2 0 _ * s3 ; move right to left deleting y
+s3 _ _ l s2
+s2 _ _ l s4
+s4 0 _ * s5 ; move right to left deleting x
+s5 _ _ l s4
+s4 _ _ r s7
+s7 _ 1 * s7 ; print a 1 and halt
+s7 1 1 * halt
+
+;; add 2 to y
+a100 1 1 r a100
+a100 _ _ r a101
+a101 1 1 r a101
+a101 _ 1 * a102
+a102 1 1 r a102
+a102 _ 1 * a103
+a103 1 1 l a103
+a103 _ _ l a104
+a104 1 1 l a104
+a104 _ _ r e100
+
+;; perform x mod y
+
+m100 0 0 r m100 ; zero out next 1 in x
+m100 1 0 * m101
+m100 _ _ r m500 ; no more 1s in x, y does not divide x
+m101 0 0 r m102
+m102 1 1 r m102
+m102 _ _ r m103
+m103 0 0 r m103 ; zero out next 1 in y
+m103 1 0 * m104
+m104 0 0 r m105
+m105 _ _ l m300 ; at end of y. clear y. check x.
+m105 1 1 l m200 ; found a 1.
+
+
+;; found a 1 and haven't exhausted y. go back to start of x.
+m200 0 0 l m200
+m200 _ _ l m201
+m201 1 1 l m201
+m201 0 0 l m201
+m201 _ _ r m100
+
+;; at end of y. clear y. check if we're at end of x.
+m300 0 1 * m300
+m300 1 1 l m300
+m300 _ _ l m301
+m301 0 0 * m400 ; y divides x
+m301 1 1 * m302
+m302 1 1 l m302
+m302 0 0 l m302
+m302 _ _ r m100
+
+;; y divides x. clear x, go to start of x.
+m400 0 1 * m400
+m400 1 1 l m400
+m400 _ _ r s100
+
+;; y does not divide x. clear y. then x.
+m500 0 1 * m501
+m501 1 1 r m500
+m500 1 1 l m502
+m502 1 1 l m502
+m502 _ _ l m503
+m503 0 1 * m503
+m503 1 1 l m503
+m503 _ _ r a100
+
+;; we found a y that divides x.
+;; erase both numbers and halt on nothing.
+s100 1 _ * s101
+s101 _ _ r s100
+s100 _ _ r s102
+s102 1 _ * s103
+s103 _ _ r s102
+s102 _ _ * halt
