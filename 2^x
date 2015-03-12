@@ -1,0 +1,96 @@
+; this program performs 2^x
+
+0 0 0 * i0
+0 1 1 * i0
+0 _ _ * i0
+
+i0 1 1 * q0
+i1 1 1 l i1
+i1 _ _ r i2
+i2 1 _ * i2
+i2 _ _ r i3
+i3 1 1 r i3
+i3 _ _ l m0
+
+;copy
+q0 _ _ * halt
+q0 1 1 * q1
+q1 1 1 r q1
+q1 _ _ l q100
+q100 1 0 * q101
+q100 _ _ r q300
+q101 0 0 r q101
+q101 1 1 r q101
+q101 _ _ r q102
+q102 1 1 r q102
+q102 _ 1 * q200
+q200 1 1 l q200
+q200 _ _ l q201
+q201 1 1 l q201
+q201 0 1 * q202
+q202 1 1 l q100
+q300 1 1 r q300
+q300 _ _ l i1
+
+; check how many more iterations
+m0 1 1 l m1
+m0 _ _ * m300 ; done
+m1 1 1 l m1
+m1 _ _ r m2
+
+; delete 1 from iterations, go to output string
+m2 1 _ * m2
+m2 _ _ r m3
+m3 1 1 r m3
+m3 _ _ r m100
+
+; perform x*x; copy x then fill in the gap and take one off the end
+m100 1 1 r r0
+
+; copy x
+r0 _ _ * halt
+r0 1 1 * r1
+r1 1 1 r r1
+r1 _ _ l r100
+r100 1 0 * r101
+r100 _ _ r r300
+r101 0 0 r r101
+r101 1 1 r r101
+r101 _ _ r r102
+r102 1 1 r r102
+r102 _ 1 * r200
+r200 1 1 l r200
+r200 _ _ l r201
+r201 1 1 l r201
+r201 0 1 * r202
+r202 1 1 l r100
+r300 1 1 r r300
+
+; fill in the gap, then take 1 off, go back to start of product
+r300 _ 1 * r301
+r301 1 1 r r301
+r301 _ _ l r302
+r302 1 _ * r303
+r303 _ _ l r304
+r304 1 1 l r304
+r304 _ _ l m0
+
+
+
+; add input to output
+m200 _ _ l m50
+m200 1 0 * m201
+m201 0 0 r m201
+m201 1 1 r m201
+m201 _ _ r m202
+m202 1 1 r m202
+m202 _ _ * m203
+m203 _ 1 * m204
+m204 1 1 l m204
+m204 _ _ l m205
+m205 1 1 l m205
+m205 0 1 l m200
+
+; clean up next seq, halt on seq after
+m300 _ _ r m300
+m300 1 1 * halt
