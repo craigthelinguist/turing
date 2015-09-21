@@ -1,2 +1,2 @@
 # turing
-Turing quadruples.
+Turing machine simulator.
