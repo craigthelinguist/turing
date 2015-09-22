@@ -1,7 +1,8 @@
 
 #include <stdlib.h>
-
 #include <ncurses.h>
+
+#include "list.h"
 
 #define TAPE_SIZE 100
 
@@ -118,3 +119,5 @@ Left (struct Machine *m) {
       m->current = prev_tape;
    }
 }
+
+int main (int argc, char *argv[]){}

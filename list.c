@@ -3,13 +3,30 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "list.h"
-
 // Struct declarations.
 // ============================================================
-struct ListNode *MakeNode (void *value);
 
-// Functions declarations. ============================================================
+typedef struct ListNode {
+   void *dataPtr;
+   struct ListNode *next;
+} ListNode;
+
+typedef struct List {
+   struct ListNode *head;
+   int elemSize;
+   int length;
+   void (*FreeFunc)(void *);
+   int (*Compare)(void *, void *);
+} List;
+
+// Function declarations.
+// ============================================================
+struct ListNode *MakeNode (void *value);
+#include "list.h"
+
+
+// Function implementations.
+// ============================================================
 
 int
 Comparison (struct List *list, void *ptr1, void *ptr2)
@@ -21,7 +38,7 @@ Comparison (struct List *list, void *ptr1, void *ptr2)
 }
 
 struct List *
-MakeList (int elemSize, void (*FreeFunc)(void *), int (*Compare)(void *, void *))
+ListMake (int elemSize, void (*FreeFunc)(void *), int (*Compare)(void *, void *))
 {
    List *list = malloc(sizeof (struct List));
    list->elemSize = elemSize;
@@ -32,7 +49,7 @@ MakeList (int elemSize, void (*FreeFunc)(void *), int (*Compare)(void *, void *)
 }
 
 void
-DelList (struct List *list)
+ListDel (struct List *list)
 {
    struct ListNode *node = list->head;
    void (*FreeFunc)(void *) = list->FreeFunc;
