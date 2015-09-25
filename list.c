@@ -48,6 +48,12 @@ ListMake (int elemSize, void (*FreeFunc)(void *), int (*Compare)(void *, void *)
    list->head = NULL;
 }
 
+int
+ListSize (struct List *list)
+{
+   return list->length;
+}
+
 void
 ListDel (struct List *list)
 {
