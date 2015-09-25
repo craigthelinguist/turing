@@ -82,17 +82,42 @@ ListContains (struct List *list, void *value)
    return 0;
 }
 
-void *
-ListGet (struct List *list, void *value)
+
+  /*
+    Check through the list for a specified value. An item in the list is
+    matched to the value according to your custom comparator function (or
+    using memcmp, if your comparator function is NULL).
+
+    You should allocate memory for the first parameter, returnPtr. It is
+    your responsibility to free it.
+
+    If no such element exists, returnPtr will be zeroed.   
+
+    returnPtr:
+      A pointer to some value. If there is a match in the list then it will
+      get copied into here.
+    list:
+      Pointer to the list you want to look through.
+    value:
+      Pointer to something to look for. It will be compared with items in the list
+      using memcmp, or your custom comparator function
+  */
+void
+ListGet (void *returnPtr, struct List *list, void *value)
 {
    struct ListNode *node = list->head;
    while (node != NULL) {
-      if (!Comparison(list, node->dataPtr, value))
-         return node->dataPtr;
-      else
+      if (!Comparison(list, node->dataPtr, value)) {
+         memcpy(returnPtr, node->dataPtr, list->elemSize);
+         return;
+      }
+      else {
          node = node->next;
+      }
    }
-   return NULL;
+
+   // Zero memory to signify value was not found.
+   memset(returnPtr, 0, list->elemSize);
 }
 
 void
