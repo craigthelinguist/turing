@@ -2,7 +2,7 @@
    /**
       A generic hashmap with copy-by-value semantics.
     **/
-typedef struct hashmap HashMap;
+typedef struct HashMap HashMap;
 
    /**
       Construct a new HashMap, which associates keys to values.
@@ -21,16 +21,16 @@ typedef struct hashmap HashMap;
    **/
 HashMap *HashMapMake (int szKey,
                       int szVal,
-                      int hash(void *),
-                      void freeKeys(void *),
-                      void freeVals(void *),
-                      int cmpKeys(void *, void *),
-                      int cmpVals(void *, void *));
+                      unsigned int (*hash)(void *),
+                      void (*freeKeys)(void *),
+                      void (*freeVals)(void *),
+                      int (*cmpKeys)(void *, void *),
+                      int (*cmpVals)(void *, void *));
 
    /**
       Tear down the given HashMap. It will free each key-value pair
       that it has stored.
-         map : 
+         map : map to free.
     **/
 void HashMapDel (HashMap *map);
 

@@ -123,6 +123,13 @@ ListGet (void *returnPtr, struct List *list, void *value)
 }
 
 void
+ListHead (struct List *list)
+{
+   if (list->head == NULL) return NULL;
+   return list->head->dataPtr;
+}
+
+void
 ListPrepend (struct List *list, void *value)
 {
 

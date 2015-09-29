@@ -25,6 +25,12 @@ void ListGet (void *ptr,
               void *value);
 
    /**
+      Get the first element in the list.
+         list : list to check.
+    **/
+void *ListHead (List *list);
+
+   /**
       Prepend the item onto the list. The value at the given pointer is copied to a new
       location in memory accessible only to the list, so the list has "copy-by-value"
       semantics.
