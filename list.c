@@ -117,6 +117,8 @@ ListGet (void *returnPtr, struct List *list, void *value)
    }
 
    // Zero memory to signify value was not found.
+   // Issue: Ints can be all zero, so maybe this needs to return
+   // a void ** ?
    memset(returnPtr, 0, list->elemSize);
 }
 
