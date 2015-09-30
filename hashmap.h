@@ -32,7 +32,7 @@ HashMap *HashMapMake (int szKey,
       that it has stored.
          map : map to free.
     **/
-void HashMapDel (HashMap *map);
+void HashMapFree (HashMap *map);
 
    /**
       Return the number of key-value pairs in the map.

@@ -59,7 +59,9 @@ List *ListMake (int elemSize,
       was created.
          list : List to delete.
     **/
-void ListDel (List *list);
+void ListFree (List *list);
+
+int ListDel (struct List *list, void *value);
 
    /**
       Return the number of elements in the list.

@@ -37,6 +37,22 @@ Comparison (struct List *list, void *ptr1, void *ptr2)
       return list->Compare(ptr1, ptr2);   
 }
 
+void
+_FreeData (struct List *list, void *dataPtr)
+{
+   void (*f)(void *) = list->FreeFunc;
+   if (list->FreeFunc == NULL) free(dataPtr);
+   else (*f)(dataPtr);
+}
+
+void
+_FreeNode (struct List *list, struct ListNode *ln)
+{
+   _FreeData(list, ln->dataPtr);
+   ln->next = NULL;
+   free(ln);
+}
+
 struct List *
 ListMake (int elemSize, void (*FreeFunc)(void *), int (*Compare)(void *, void *))
 {
@@ -55,16 +71,13 @@ ListSize (struct List *list)
 }
 
 void
-ListDel (struct List *list)
+ListFree (struct List *list)
 {
    struct ListNode *node = list->head;
    void (*FreeFunc)(void *) = list->FreeFunc;
    while (node != NULL) {
-      if (FreeFunc != NULL) FreeFunc(node->dataPtr);
-      else free(node->dataPtr);
       struct ListNode *next = node->next;
-      node->next = NULL;
-      free(node);
+      _FreeNode(list, node);
       node = next;
    }
    free(list);
@@ -108,6 +121,7 @@ ListGet (void *returnPtr, struct List *list, void *value)
    struct ListNode *node = list->head;
    while (node != NULL) {
       if (!Comparison(list, node->dataPtr, value)) {
+         memset(returnPtr, 0, list->elemSize); // To zero out any padding.
          memcpy(returnPtr, node->dataPtr, list->elemSize);
          return;
       }
@@ -129,8 +143,48 @@ ListHead (void *returnPtr, struct List *list)
       returnPtr = NULL;
       return;   
    }
-   void *ptr = malloc(list->elemSize);
+   void *ptr = calloc(1, list->elemSize); // calloc to zero out any padding bytes.
    memcpy(ptr, list->head->dataPtr, list->elemSize);
+}
+
+int
+ListDel (struct List *list, void *value)
+{
+   // Nothing in list.
+   if (list->head == NULL) return 0;
+
+   // It's in the head of the list.
+   if (!Comparison(list, value, list->head->dataPtr)) {
+      _FreeNode(list, list->head);
+      list->head = NULL;
+      list->length = list->length - 1;
+      return 1;
+   }
+
+   // Otherwise traverse the list keeping track of prev and next node.
+   struct ListNode *prev = list->head;
+   struct ListNode *next = prev->next;
+   
+   while (next != NULL) {
+      
+      // Not at this position. Keep moving along.
+      if (Comparison(list, value, next->dataPtr)) {
+         ListNode *tmp = next;
+         next = next->next;
+         prev = tmp;
+         continue;
+      }
+   
+      // Found it. Free the node, adjust the list, return 1.
+      struct ListNode *next_next = next->next;
+      _FreeNode(list, next);
+      prev->next = next_next;
+      list->length = list->length - 1;
+      return 1;
+
+   }
+
+   return 0; // Item not in list.
 }
 
 void
@@ -139,7 +193,7 @@ ListPrepend (struct List *list, void *value)
 
    // Allocate memory for node. Copy value across.
    ListNode *node = malloc(sizeof (struct ListNode));
-   node->dataPtr = malloc(list->elemSize);
+   node->dataPtr = calloc(1, list->elemSize); // calloc to zero out any padding bytes.
    memcpy(node->dataPtr, value, list->elemSize);
 
    // Prepend onto list.

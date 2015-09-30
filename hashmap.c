@@ -63,9 +63,7 @@ void _rebuild (struct HashMap *map);
     **/
 List *_list (struct HashMap *map)
 {
-   // should make a list of pairs
-   // pairs should be compared by key as that is guaranteed to be unique
-   // in any given bucket.
+   return ListMake(sizeof(struct Pair), NULL, NULL);
 }
 
 
@@ -81,7 +79,8 @@ int _should_resize (struct HashMap *map)
 }
 
    /**
-      Apply the hash function the specified item.
+      Apply the hash function of the map to the specified item.
+      Return not guaranteed to be within the bounds of the table.
          key : pointer to thing serving as a key.
     **/
 unsigned int _hash (struct HashMap *map, void *key)
@@ -160,13 +159,13 @@ HashMapMake (int szKey, int szVal, HashFunc hashFunc,
       that it has stored.
          map : map to free.
     **/
-void HashMapDel (HashMap *map)
+void HashMapFree (HashMap *map)
 {
    int i;
    for (i=0; i < map->capacity; i++) {
       List *list = (List *)(map->table[i]);
       if (list == NULL) continue;
-      ListDel(list);
+      ListFree(list);
    }
    free(map);
 }
@@ -221,18 +220,24 @@ void HashMapPut (HashMap *map, void *key, void *val) {
    unsigned int index = _hash(map, key) % map->capacity;
    List *list = (List *)map->table[index];
 
+   // Calloc a struct which we will use to check if our element is in this
+   // bucket. Use calloc to zero out padding bytes so that memcmp will work.
+   struct Pair *pair;
+   memset(pair, 0, sizeof(pair));
+   pair->key = key;
+   pair->val = val;
+
    // Need to make a list.   
    if (list == NULL) {
       list = _list(map);
-      struct Pair *pair;
-      pair->key = key;
-      pair->val = val;
       ListPrepend(list, pair); // List makes a copy of pair.
       return;
    }
 
-   // Check list for the key...
-   
+   // Remove key-val pair if it already exists. Insert new one.
+   ListDel(list, pair);
+   ListPrepend(list, pair);
+
 }
 
 

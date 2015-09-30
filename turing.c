@@ -3,9 +3,12 @@
 #include <ncurses.h>
 
 #include "list.h"
+#include "hashmap.h"
+#include "word.h"
 
 #define TAPE_SIZE 100
 
+typedef enum instr { HALT = -3, LEFT, RIGHT } Instruction;
 
 
 // Function declarations.
@@ -16,7 +19,6 @@ void DelTape (struct Tape *);
 
 struct Machine *MakeMachine (void);
 void DelMachine (struct Machine *);
-
 
 // Struct definitions.
 // ============================================================
@@ -29,6 +31,10 @@ struct Tape {
 
 struct Machine {
    int head;
+   int state;
+   HashMap *trans_lookup;
+   HashMap *input_lookup;
+   HashMap *output_lookup;
    struct Tape *leftmost;
    struct Tape *current;
 };
@@ -100,7 +106,7 @@ Read (struct Machine *m, char c) {
 }
 
 void
-Right (struct Machine *m) {
+MvRight (struct Machine *m) {
    int head = (m->head + 1) % TAPE_SIZE;
    if (head == 0) {
       struct Tape *next_tape = MakeTape();
@@ -110,7 +116,7 @@ Right (struct Machine *m) {
 }
 
 void
-Left (struct Machine *m) {
+MvLeft (struct Machine *m) {
    int head = (m->head - 1) % TAPE_SIZE;
    if (head == -1) {
       head = TAPE_SIZE - 1; // Wrap around to end.
@@ -120,4 +126,44 @@ Left (struct Machine *m) {
    }
 }
 
+void
+Step (struct Machine *m) {
+   if (m->state == HALT) return;
+   void *ptr = HashMapGet (m->output_lookup, &(m->state));
+   if (ptr == NULL) abort(); // No such state exists.
+   int instr = *((int *)ptr);   
+   switch (instr) {
+   
+      case LEFT:
+         MvLeft(m);
+         break;
+
+      case RIGHT:
+         MvRight(m);
+         break;
+
+      default:
+         // should actually print char here         
+         abort();
+
+   }
+}
+
 int main (int argc, char *argv[]){}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
