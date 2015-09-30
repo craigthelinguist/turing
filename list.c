@@ -123,10 +123,14 @@ ListGet (void *returnPtr, struct List *list, void *value)
 }
 
 void
-ListHead (struct List *list)
+ListHead (void *returnPtr, struct List *list)
 {
-   if (list->head == NULL) return NULL;
-   return list->head->dataPtr;
+   if (list->head == NULL) {
+      returnPtr = NULL;
+      return;   
+   }
+   void *ptr = malloc(list->elemSize);
+   memcpy(ptr, list->head->dataPtr, list->elemSize);
 }
 
 void

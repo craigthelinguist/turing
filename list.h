@@ -28,7 +28,7 @@ void ListGet (void *ptr,
       Get the first element in the list.
          list : list to check.
     **/
-void *ListHead (List *list);
+void ListHead (void *ptr, List *list);
 
    /**
       Prepend the item onto the list. The value at the given pointer is copied to a new

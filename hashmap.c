@@ -23,18 +23,22 @@ typedef unsigned int (*HashFunc)(void *);
 // Struct declarations.
 // ======================================================================
 
+struct Pair {
+   void *key;
+   void *val;
+};
+
 struct HashMap {
    int capacity;
-   int numBuckets; // current size of buckets.
+   int numElems; // number of things in the map.
    int szKey;
    int szVal;
-   int szBucket;
    HashFunc hash;
    FreeFunc keyFree;
    FreeFunc valFree;
    CmpFunc keyCmp;
    CmpFunc valCmp;
-   void **buckets;
+   List **table; // array of list ptrs.
 };
 
 
@@ -45,7 +49,6 @@ struct HashMap {
 unsigned int _hash (struct HashMap *map, void *key);
 List *_list (struct HashMap *map);
 int _should_resize (struct HashMap *map);
-int _szBucket (struct HashMap *map);
 void _rebuild (struct HashMap *map);
 
 
@@ -55,13 +58,16 @@ void _rebuild (struct HashMap *map);
 // ======================================================================
 
    /**
-      Make a chain for storing values in.
+      Make a list for storing values in.
          map : map the list will be apart of.
     **/
 List *_list (struct HashMap *map)
 {
-   return ListMake(map->szVal, map->valFree, map->valCmp);
+   // should make a list of pairs
+   // pairs should be compared by key as that is guaranteed to be unique
+   // in any given bucket.
 }
+
 
    /**
       Whether the hash-table needs to be resized. Result is non-zero if it
@@ -70,33 +76,19 @@ List *_list (struct HashMap *map)
     **/
 int _should_resize (struct HashMap *map)
 {
-   float density = map->numBuckets / map->capacity;
+   float density = map->numElems / map->capacity;
    return density >= 0.75;
 }
 
    /**
-      Return an index specifying where the key should be hashed to.
-      The index will be modulo the bounds of the map's hashtable.
-         map : the map that the key is being hashed into.
+      Apply the hash function the specified item.
          key : pointer to thing serving as a key.
     **/
 unsigned int _hash (struct HashMap *map, void *key)
 {
    if (map->hash != NULL)
-      return (*map->hash)(key) % map->capacity;
+      return (*map->hash)(key);
    return 0;
-}
-
-int _szBucket (struct HashMap *map)
-{
-   /**
-    This is what a bucket is:
-    =========================================
-    | SIGNAL | POINTER TO |       LIST      |
-    |  BYTE  |     KEY    |    OF VALUES    |
-    =========================================
-    **/
-   return 1 + sizeof(List *) + map->szKey;
 }
 
    /**
@@ -109,50 +101,32 @@ int _szBucket (struct HashMap *map)
 void _rebuild (struct HashMap *map)
 {
 
-   /**
-    This is what a bucket is:
-    =========================================
-    | SIGNAL | POINTER TO |       LIST      |
-    |  BYTE  |     KEY    |    OF VALUES    |
-    =========================================
-    **/
-   int szBucket = _szBucket(map);
-
    // Allocate a new array with twice the space.
    // We use calloc to zero out memory, since the first byte of each bucket
    // is going to signify whether that bucket is occupied.
    int new_capacity = map->capacity * 2;
-   void **new_table = calloc(new_capacity, szBucket);
-  
+   List **new_table = calloc(new_capacity, sizeof(List *));
+
    // Copy values across from old array.
    int i;
-   for (i=0 ; i < map->capacity; i++){
-   
-      // Figure out offset. Check signal byte.
-      // If signal byte is zero, nothing in this bucket to copy.
-      // Cast to char * because char = 1 byte on all platforms.
-      int offset = szBucket * i;
-      int signalByte = *((char *)map->buckets[offset]);
-      if (!signalByte) continue; // No entry in this bucket.
-      
-      // Otherwise extract key and list * from the bucket.
-      void *key = map->buckets[offset+1];
-      List *list = map->buckets[offset+1+map->szKey];
-      
-      // Compute hash for new table.
-      // Copy across the signal byte, key, and list ptr.
-      int index = _hash(map, key);
-      *((int *)new_table[index]) = 1;
-      memcpy(new_table + index + 1, key, map->szKey);
-      memcpy(new_table + index + 1 + map->szKey, list, sizeof(List *));
-      
+   for (i=0 ; i < map->capacity; i++) {
+
+      // Check if there is anything at this bucket in the table.
+      List *list = (List *)(map->table[i]);
+      if (list == NULL) continue;
+
+      // Copy list ptr across to new table.
+      void *key;
+      ListHead(key, list);
+      unsigned int index = _hash(map, key) % new_capacity;
+      memcpy(new_table[index], key, sizeof(List *));
    }
-   
+
    // Free old array, update hash map.
-   free(map->buckets);
-   map->buckets = new_table;
+   free(map->table);
+   map->table = new_table;
    map->capacity = new_capacity;
-   
+
 }
 
 
@@ -167,7 +141,7 @@ HashMapMake (int szKey, int szVal, HashFunc hashFunc,
 {
    struct HashMap *map = malloc(sizeof (struct HashMap));
    map->capacity = INIT_CAPACITY;
-   map->numBuckets = 0;
+   map->numElems = 0;
    map->szKey = szKey;
    map->szVal = szVal;
    map->hash = hashFunc;
@@ -175,8 +149,7 @@ HashMapMake (int szKey, int szVal, HashFunc hashFunc,
    map->valFree = freeVals;
    map->keyCmp = cmpKeys;
    map->valCmp = cmpVals;
-   map->szBucket = 1 + sizeof(List *) + szKey;
-   map->buckets = calloc(map->capacity, map->szBucket);
+   map->table = calloc(map->capacity, sizeof (List *));
    return map;
 }
 
@@ -189,18 +162,10 @@ HashMapMake (int szKey, int szVal, HashFunc hashFunc,
     **/
 void HashMapDel (HashMap *map)
 {
-   int szBucket = _szBucket(map);
    int i;
    for (i=0; i < map->capacity; i++) {
-      int offset = szBucket * i;
-      int signalByte = *((char *)map->buckets[offset]);
-      if (!signalByte) continue; // No entry in this bucket
-      
-      // Get the key and list. Free each.
-      void *key = map->buckets + 1;
-      List *list = (List *)(map->buckets + map->szKey );
-      if (!map->keyFree) free(key);
-      else (*map->keyFree)(key);
+      List *list = (List *)(map->table[i]);
+      if (list == NULL) continue;
       ListDel(list);
    }
    free(map);
@@ -211,7 +176,7 @@ void HashMapDel (HashMap *map)
          map : map to check.
     **/
 int HashMapSize (HashMap *map) {
-   return map->numBuckets;
+   return map->numElems;
 }
 
    /**
@@ -230,17 +195,19 @@ int HashMapContains (HashMap *map, void *key) {
     **/
 void *HashMapGet (HashMap *map, void *key) {
    
-   // Hash key to get its index.
-   unsigned int index = _hash(map, key);
-   
-   // Check first byte at index to see where key should be.
-   char *signal_byte = (char *)map->buckets[index];
-   if (!signal_byte) return NULL;
-   
-   // Get the list, check the first element.
-   List *list = (List *)(map->buckets[index + 1 + map->szKey]);
-   return ListHead(list);
-   
+   // Hash key and get appropriate list.
+   unsigned int index = _hash(map, key) % map->capacity;
+   List *list = (List *)(map->table[index]);
+   if (list == NULL) return NULL;
+
+   // Check the list for the key. The list of pairs has its comparator
+   // something which checks for keys, and it will return the pair as a struct.
+   void *ptr;
+   ListGet (ptr, list, key);
+   if (ptr == NULL) return NULL;
+   struct Pair *pair = (struct Pair *)ptr;
+   return pair->val;
+
 }
 
    /**
@@ -249,25 +216,22 @@ void *HashMapGet (HashMap *map, void *key) {
          key : the address of the value under the map.
          val : the image of the key under the map.
     **/
-void *HashMapPut (HashMap *map, void *key, void *val) {
+void HashMapPut (HashMap *map, void *key, void *val) {
    
-   // Get index and check signal byte.
-   unsigned int index = _hash(map, key);
-   char *signal_byte = (char *)map->buckets[index];
+   unsigned int index = _hash(map, key) % map->capacity;
+   List *list = (List *)map->table[index];
 
-   // If signal byte is false, then you need to construct
-   // a list for this bucket.
-   if (!signal_byte) {
-      List *list = ListMake(map->szVal, map->valFree, map->valCmp);
-      memcpy(map->buckets[index + 1], key, map->szKey);
-      memcpy(map->buckets[index + 1 + map->szKey], list, sizeof(List *));
+   // Need to make a list.   
+   if (list == NULL) {
+      list = _list(map);
+      struct Pair *pair;
+      pair->key = key;
+      pair->val = val;
+      ListPrepend(list, pair); // List makes a copy of pair.
+      return;
    }
-   
-   // hmm... what if two distinct keys hash to the same list?
-   // i'm boned - the table just need to hold a signal byte
-   // and a list.
-   // Maybe can pack signal byte to show if there has been a collision
-   // here.
+
+   // Check list for the key...
    
 }
 

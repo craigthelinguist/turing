@@ -62,4 +62,4 @@ void *HashMapGet (HashMap *map,
          key : the address of the value under the map.
          val : the image of the key under the map.
     **/
-void *HashMapPut (HashMap *map, void *key, void *val);
+void HashMapPut (HashMap *map, void *key, void *val);
