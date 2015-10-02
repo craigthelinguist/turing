@@ -2,9 +2,45 @@
 
 
 #include "stdlib.h"
+#include <stdio.h>
+#include <string.h>
+
+#include "minunit.h"
 
 #include "list.h"
-#include "minunit.h"
+
+
+
+#define SIZE_TEST(x) mu_assert(List_Size(list) == x, "List should have 3 things in it.");
+#define NULL_CHECK(x) mu_assert(x != NULL, "Element shouldn't be null.");
+#define INDEX_TEST(x, y) mu_assert(List_IndexOf(list, x) == y, "Element in wrong index.");
+#define CONTAIN_TEST(x) mu_assert(List_Contains(list, x), "Element not found in list.");
+#define MISSING_TEST(x) mu_assert(!List_Contains(list, x), "Element should be missing.");
+
+struct Person {
+   char *name;
+   int age;
+};
+
+   /**
+      Checks if two numbers are equal to within a certain threshold. **/
+int fuzzy_eq (void *n1, void *n2)
+{
+   int x, y;
+   x = *(int*)n1; y = *(int*)n2;
+   int r = x - y;
+   if (r < 0) r = -r;
+   return r < 3 ? 0 : 1;
+}
+
+   /**
+      Checks if two persons are equal by whether they have the same name. **/
+int name_eq (void *p, void *q)
+{
+   struct Person *p1 = (struct Person *)p;
+   struct Person *q1 = (struct Person *)q;
+   return strcmp(p1->name, q1->name);
+}
 
 List *list;
 
@@ -20,174 +56,182 @@ void Teardown () {
       Check the constructor gives you a list with a sensible initial state.
    */
 MU_TEST(test_constructor) {
-   list = ListMake(sizeof(int), NULL, NULL);
-   mu_assert(list != NULL, "Constructor should not return null pointer.");
-   mu_assert(ListSize(list) == 0, "Empty list should have size of 0.");
+   list = List_Make(10, sizeof(int), NULL, NULL);
+   NULL_CHECK(list);
+   SIZE_TEST(0);
 }
 
-   /*
-      Test adding to a list.
-      Make sure list doesn't break if you add something to list and then update the
-      thing which was added to the list.
-   */ 
 MU_TEST(test_add) {
 
    // Construct a list and add x.
-   list = ListMake(sizeof(int), NULL, NULL);
+   list = List_Make(10, sizeof(int), NULL, NULL);
    int x = 4;
-   ListPrepend(list, &x);
-   mu_assert(ListSize(list) == 1, "List size should be 1 after adding an element.");
-   mu_assert(ListContains(list, &x), "List should contain integer after adding it.");
-   
-   // If we update x, this shouldn't affect the 'x' in the list.
-   // That is, adding to the list has pass-by-value semantics.
-   int z = 4;
-   x = 5;
-   mu_assert(ListContains(list, &z), "If you add x to list and then update x, its original value should still be in the list.");
-   mu_assert(!ListContains(list, &x), "If you add to list and then update x, its new value should not be in the list.");
+   List_Append(list, &x);
+
+   // Tests.
+   SIZE_TEST(1);
+   INDEX_TEST(&x, 0);
+   CONTAIN_TEST(&x);
 }
 
 MU_TEST(test_add_2) {
-
-   // Construct a list and add three things.
-   list = ListMake(sizeof(int), NULL, NULL);
-   int x = 4;
-   int y = 5;
-   int z = 5;
-   ListPrepend(list, &x);
-   ListPrepend(list, &y);
-   ListPrepend(list, &z);
    
-   // The list should now have three things in it.
-   mu_assert(ListSize(list) == 3, "List should be size 3 after adding 3 things.");
-   mu_assert(ListContains(list, &x), "List should contain the element you added.");
-   mu_assert(ListContains(list, &y), "List should contain the element you added.");
-   mu_assert(ListContains(list, &z), "List should contain the element you added.");
+   // Make a list, add multiple things.
+   list = List_Make(10, sizeof(char), NULL, NULL);
+   char chars[6] = { 34, 120, 66, 76, 41, 8 };
+   int i;
+   for (i=0; i < 6; i++) {
+      List_Append(list, &chars[i]);
+   }
    
-   
-   // If you retrieve the contents of the list it should be the same as what you added.
-   int *ptr = malloc(sizeof (int));
-   ListGet(ptr, list, &x);
-   mu_assert(*ptr == x,  "If you add element and retrieve it, it should be the same.");
+   // List should have those things in order of insertion.
+   SIZE_TEST(6);
+   for (i=0; i < 6; i++) {
+      INDEX_TEST(&chars[i], i);
+      CONTAIN_TEST(&chars[i]);
+   }
 
-   ListGet(ptr, list, &y);
-   mu_assert(*ptr == y, "If you add element and retrieve it, it should be the same.");
-
-   ListGet(ptr, list, &z);
-   mu_assert(*ptr == z, "If you add element and retrieve it, it should be the same.");
 }
 
-
-struct Triple {
-   int x;
-   char y;
-   float z;
-};
-
+   /**
+      Add and retrieve with structs.
+    **/
 MU_TEST(test_add_3) {
 
-   // Make the list. Make some items to add.
-   list = ListMake(sizeof(struct Triple), NULL, NULL);
-   struct Triple t1 = { 2, 3, 6 };
-   struct Triple t2 = { 4, 5, 1 };
+   // Make a list, make structs, add people.   
+   list = List_Make(10, sizeof(struct Person), NULL, NULL);
+   struct Person p = { "rawinia", 34 };
+   struct Person q = { "cook", 88 };
+   List_Append(list, &p);
+   List_Append(list, &q);
 
-   
-   // Add items to the list.
-   ListPrepend(list, &t1);
-   ListPrepend(list, &t2);
-
-   // Size of list should be two. Elements you added should be there.
-   mu_assert(ListSize(list) == 2, "List size after adding should be two.");
-
-   // Retrieve the triples. They should be equal to what you added.
-   struct Triple *rPtr = malloc(sizeof (struct Triple));
-
-   ListGet(rPtr, list, &t1);
-   mu_assert(rPtr->x == t1.x && rPtr->y == t1.y && rPtr->z == t1.z, "Struct you put in map should be equal to struct retrieved from map.");
-
-   ListGet(rPtr, list, &t2);
-   mu_assert(rPtr->x == t2.x && rPtr->y == t2.y && rPtr->z == t2.z, "Struct you put in map should be equal to struct retrieved from map.");
+   // List size should be correct. Things should be in right order.
+   SIZE_TEST(2);
+   INDEX_TEST(&p, 0);
+   INDEX_TEST(&q, 1);
+   CONTAIN_TEST(&p);
+   CONTAIN_TEST(&q);
 
 }
 
 
-struct Person {
-   int age;
-   char *name;
-};
+   /**
+      Add and retrieve primitives with custom comparator functions.
+    **/
+MU_TEST(test_add_4) {
 
-int PersonComp (void *p1, void *p2)
-{
-   char *s1 = ((struct Person *)p1)->name;
-   char *s2 = ((struct Person *)p2)->name;
-   int i, j;
-   for (i = 0; s1[i] != '\0' && s2[i] != '\0'; i++) {
-      if (s1[i] != s2[i]) return 1;
+   // Make a list, add numbers.
+   list = List_Make(10, sizeof(struct Person), &fuzzy_eq, NULL);
+   int ints[] = { 43, 50, 106, 88, -13 };
+   int i;
+   for (i=0; i < 5; i++) {
+      List_Append(list, &ints[i]);   
    }
-   return s1[i] != '\0' || s2[i] != '\0';
+
+   // Everything in the list should register.
+   for (i=0; i < 5; i++) {
+      INDEX_TEST(&ints[i], i);
+      CONTAIN_TEST(&ints[i]);   
+   }
+
+   // Some things not in the list which should not register.
+   int bad[] = { -100, 55, 3, 67, 24 };
+   for (i=0; i < 5; i++) {
+      INDEX_TEST(&bad[i], -1);
+      MISSING_TEST(&bad[i]);
+   }
+
+   // Items which match things in the list according to our unique
+   // notion of equality.
+   int ok[] = { 44, 51, 104, 90, -14 };
+   for (i=0; i < 5; i++) {
+      INDEX_TEST(&ok[i], i);
+      CONTAIN_TEST(&ok[i]);   
+   }
+
 }
 
-MU_TEST(test_eq_func) {
-   struct Person p1 = { 10, "billy" };
-   struct Person p2 = { 10, "john" };
-   struct Person p3 = { 5, "billy" };
-   mu_assert(PersonComp(&p1, &p2), "People with different names not equal.");
-   mu_assert(!PersonComp(&p1, &p3), "People with same names equal.");
-   mu_assert(PersonComp(&p2, &p3), "People with different names not equal.");
-}
+   /**
+      Add and retrieve structs with custom comparator functions.
+    **/
+MU_TEST(test_add_5) {
 
-MU_TEST(test_eq_func_2) {
+   // Make and populate list.
+   list = List_Make(10, sizeof (struct Person), name_eq, NULL);
+   struct Person p = { "ron", 34 };
+   struct Person q = { "ayako", 4 };
+   List_Append(list, &p);
+   List_Append(list, &q);
 
-   // Make some people.
-   struct Person p1 = { 10, "billy" };
-   struct Person p2 = { 10, "johnny" };   
-   struct Person p3 = { 5, "billy" };
+   // Should be able to find those things again.
+   INDEX_TEST(&p, 0); INDEX_TEST(&q, 1);
+   CONTAIN_TEST(&p); CONTAIN_TEST(&q);
 
-   // Add to a list.
-   List *list = ListMake(sizeof(struct Person), NULL, &PersonComp);
-   ListPrepend(list, &p1);
-   ListPrepend(list, &p2);
-   ListPrepend(list, &p3);
+   // Should able to find by different things that are equal according
+   // to our notion of equality.
+   struct Person r = { "ron", 100 };
+   struct Person s = { "ayako", -5 };
+   INDEX_TEST(&r, 0); INDEX_TEST(&s, 1);
+   CONTAIN_TEST(&r); CONTAIN_TEST(&s);
 
-   // Should be able to find the item using custom equality function.
-   struct Person *rPtr = malloc(sizeof (struct Person));
-   ListGet(rPtr, list, &p2);
-   struct Person q = *rPtr;
-
-   mu_assert(ListContains(list, &p1), "Should be in list after adding.");
-   mu_assert(ListContains(list, &p2), "Should be in list after adding.");
-   mu_assert(ListContains(list, &p3), "Should be in list after adding.");
-
-   mu_assert(!PersonComp(&p2, &q), "Thing retrieved from map should be equal to thing you searched for.");
-   mu_assert(q.age == p2.age, "Thing retrieved from map should be equal to thing you searched for.");
-
-   // If I make something which hasn't added to the map, but it is equal to something in the map
-   // according to the comparison function, should return a positive match.
-
-   struct Person r = { 100, "billy" };
-   mu_assert(ListContains(list, &r), "Item equivalent by comparison function should be in list.");
+   // Should have matched to correct thing.
+   int idx = List_IndexOf(list, &r);
+   struct Person a = *(struct Person *)List_Get(list, idx);
+   mu_assert(a.age == 34, "Should have matched the right thing.");
+ 
+   // And now, for something random.
+   struct Person t = { "jon", 34 };
+   INDEX_TEST(&t, -1);
+   MISSING_TEST(&t);
 
 }
 
 MU_TEST(test_aliasing) {
 
-   // Add person to list.
-   struct Person p1 = { 40, "rawinia" };
-   List *list = ListMake(sizeof (struct Person), NULL, &PersonComp);
-   ListPrepend(list, &p1);
-   mu_assert(ListContains(list, &p1), "Should be in list after adding.");
-   
-   // Check aliasing of insert.
-   struct Person *q = malloc(sizeof (struct Person));
-   ListGet(q, list, &p1);
-   q->age = 10;
-   mu_assert(q->age != p1.age, "Item in list shouldn't refer to same thing as inserted value.");
+   // Add to list, pull it out again.
+   list = List_Make(10, sizeof(int), NULL, NULL);
+   int x = 40;
+   List_Append(list, &x);
+   int *y = (int *)List_Get(list, 0);
+   mu_assert(x==*y, "Should be same item.");
 
-   // Check aliasing of return.
-   struct Person *r = malloc(sizeof (struct Person));
-   ListGet(r, list, &p1);
-   mu_assert(q->age != r->age, "Item in list shouldn't refer to same thing as return value.");
+   // Modify the thing you got back. You should still be able to find
+   // it in the list with its original value.
+   *y = 100;
+   int *z = (int *)List_Get(list, 0);
+   mu_assert(*z==x, "Should not have been modified.");
    
+   // Now check that the original value is the same.
+   mu_assert(x==40, "Should not have been modified.");
+   free(y);
+   free(z);
+      
+}
+
+MU_TEST(test_aliasing_2) {
+
+   // Add to list, pull it out again.
+   list = List_Make(10, sizeof(struct Person), NULL, NULL);
+   struct Person P = { "hemi", 14 };
+   struct Person Q = { "jane", 21 };
+   List_Append(list, &P);
+   List_Append(list, &Q);
+   struct Person *y = (struct Person *)List_Get(list, 1);
+   mu_assert(!memcmp(&Q, y, sizeof(struct Person)), "Should be same item.");
+
+   // Modify the thing you got back. You should still be able to find
+   // it in the list with its original value.
+   y->name = "billy";
+   struct Person *z = (struct Person *)List_Get(list, 1);
+   mu_assert(!strcmp(Q.name, z->name) && Q.age == z->age,
+      "Should not have been modified.");
+   
+   // Now check the original is the same.
+   mu_assert(!strcmp("jane", Q.name) && Q.age == 21,
+      "Should not have been modified.");
+   free(y);
+   free(z);
+
 }
 
 MU_TEST_SUITE(test_suite) {
@@ -196,9 +240,10 @@ MU_TEST_SUITE(test_suite) {
    MU_RUN_TEST(test_add);
    MU_RUN_TEST(test_add_2);
    MU_RUN_TEST(test_add_3);
-   MU_RUN_TEST(test_eq_func);
-   MU_RUN_TEST(test_eq_func_2);
+   MU_RUN_TEST(test_add_4);
+   MU_RUN_TEST(test_add_5);
    MU_RUN_TEST(test_aliasing);
+   MU_RUN_TEST(test_aliasing_2);
 }
 
 int main(int argc, char *argv[]) {
