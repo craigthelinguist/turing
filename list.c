@@ -1,205 +1,225 @@
 
-
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
-// Struct declarations.
-// ============================================================
-
-typedef struct ListNode {
-   void *dataPtr;
-   struct ListNode *next;
-} ListNode;
-
-typedef struct List {
-   struct ListNode *head;
-   int elemSize;
-   int length;
-   void (*FreeFunc)(void *);
-   int (*Compare)(void *, void *);
-} List;
-
-// Function declarations.
-// ============================================================
-struct ListNode *MakeNode (void *value);
 #include "list.h"
 
+typedef int (*CmpFunc)(void *, void*);
+typedef void (*FreeFunc)(void *);
 
-// Function implementations.
+struct list {
+   int len;
+   int capacity;
+   int szitem;
+   void *arr;
+   CmpFunc cmp;
+   FreeFunc free_item;
+};
+
+static inline int item_eq (struct list *list, void *item1, void *item2);
+static inline int should_resize (struct list *list);
+static void resize (struct list *list);
+
+// Internal functions.
 // ============================================================
 
-int
-Comparison (struct List *list, void *ptr1, void *ptr2)
+static inline int item_eq (struct list *list, void *item1, void *item2)
 {
-   if (list->Compare == NULL)
-      return memcmp(ptr1, ptr2, list->elemSize);   
+   if (!list->cmp)
+      return memcmp(item1, item2, list->szitem);
    else
-      return list->Compare(ptr1, ptr2);   
+      return !(*(list->cmp))(item1, item2);
 }
 
-void
-_FreeData (struct List *list, void *dataPtr)
+static inline void item_free (struct list *list, void *item)
 {
-   void (*f)(void *) = list->FreeFunc;
-   if (list->FreeFunc == NULL) free(dataPtr);
-   else (*f)(dataPtr);
+   if (!list->free_item)
+      free(item);
+   else
+      (*(list->free_item))(item);
 }
 
-void
-_FreeNode (struct List *list, struct ListNode *ln)
+static inline int should_resize (struct list *list)
 {
-   _FreeData(list, ln->dataPtr);
-   ln->next = NULL;
-   free(ln);
+   return list->capacity == list->len;
 }
 
-struct List *
-ListMake (int elemSize, void (*FreeFunc)(void *), int (*Compare)(void *, void *))
+static void resize (struct list *list)
 {
-   List *list = malloc(sizeof (struct List));
-   list->elemSize = elemSize;
-   list->FreeFunc = FreeFunc;
-   list->Compare = Compare;
-   list->length = 0;
-   list->head = NULL;
-}
 
-int
-ListSize (struct List *list)
-{
-   return list->length;
-}
-
-void
-ListFree (struct List *list)
-{
-   struct ListNode *node = list->head;
-   void (*FreeFunc)(void *) = list->FreeFunc;
-   while (node != NULL) {
-      struct ListNode *next = node->next;
-      _FreeNode(list, node);
-      node = next;
-   }
-   free(list);
-}
-
-int
-ListContains (struct List *list, void *value)
-{
-   struct ListNode *node = list->head;
-   while (node != NULL) {
-      if (!Comparison(list, node->dataPtr, value))
-         return 1;
-      node = node->next;   
-   }
-   return 0;
-}
-
-
-  /*
-    Check through the list for a specified value. An item in the list is
-    matched to the value according to your custom comparator function (or
-    using memcmp, if your comparator function is NULL).
-
-    You should allocate memory for the first parameter, returnPtr. It is
-    your responsibility to free it.
-
-    If no such element exists, returnPtr will be zeroed.   
-
-    returnPtr:
-      A pointer to some value. If there is a match in the list then it will
-      get copied into here.
-    list:
-      Pointer to the list you want to look through.
-    value:
-      Pointer to something to look for. It will be compared with items in the list
-      using memcmp, or your custom comparator function
-  */
-void
-ListGet (void *returnPtr, struct List *list, void *value)
-{
-   struct ListNode *node = list->head;
-   while (node != NULL) {
-      if (!Comparison(list, node->dataPtr, value)) {
-         memset(returnPtr, 0, list->elemSize); // To zero out any padding.
-         memcpy(returnPtr, node->dataPtr, list->elemSize);
-         return;
-      }
-      else {
-         node = node->next;
-      }
-   }
-
-   // Zero memory to signify value was not found.
-   // Issue: Ints can be all zero, so maybe this needs to return
-   // a void ** ?
-   memset(returnPtr, 0, list->elemSize);
-}
-
-void
-ListHead (void *returnPtr, struct List *list)
-{
-   if (list->head == NULL) {
-      returnPtr = NULL;
-      return;   
-   }
-   void *ptr = calloc(1, list->elemSize); // calloc to zero out any padding bytes.
-   memcpy(ptr, list->head->dataPtr, list->elemSize);
-}
-
-int
-ListDel (struct List *list, void *value)
-{
-   // Nothing in list.
-   if (list->head == NULL) return 0;
-
-   // It's in the head of the list.
-   if (!Comparison(list, value, list->head->dataPtr)) {
-      _FreeNode(list, list->head);
-      list->head = NULL;
-      list->length = list->length - 1;
-      return 1;
-   }
-
-   // Otherwise traverse the list keeping track of prev and next node.
-   struct ListNode *prev = list->head;
-   struct ListNode *next = prev->next;
+   // Allocate memory for new array. Use char * so that pointer
+   // arithmetic moves by one byte each time.
+   int new_capacity = list->capacity * 2;
+   char *new_arr = calloc(list->szitem, new_capacity);
+   char *old_arr = list->arr;
+   int szitem = list->szitem;
    
-   while (next != NULL) {
+   // Copy everything across to the new table.
+   int i;
+   for (i=0; i < list->len; i++) {
+      int offset = i*szitem;
+      memcpy(new_arr + offset, old_arr + offset, szitem);
+   }
+   
+   // Free old table, update the struct.
+   free(old_arr);
+   list->capacity = new_capacity;
+   list->arr = (void *)new_arr;
+   
+}
+
+static inline void *offset (struct list *list, int index)
+{
+   int offset = list->szitem * index;
+   char *arr = list->arr;
+   return arr + offset;
+}
+
+static inline void out_of_bounds ()
+{
+   fprintf(stderr, "Trying to access list at illegal index.");
+   abort();
+}
+
+// Public functions.
+// ============================================================
+
+List * List_Make (int initial_capacity,
+                 int elem_size,
+                 CmpFunc cmp,
+                 FreeFunc free)
+{
+   struct list *list = malloc(sizeof (struct list));
+   list->arr = calloc(elem_size, initial_capacity);
+   list->capacity = initial_capacity;
+   list->szitem = elem_size;
+   list->cmp = cmp;
+   list->len = 0;
+   list->free_item = free;
+   return list;
+}
+
+void List_Free (List *list)
+{
+
+   // Go through list freeing everything.
+   FreeFunc free_item = list->free_item;
+   int i;
+   for (i=0; i < list->len; i++) {
+      void *item = offset(list, i);
+      (*free_item)(item);
+   }
+   
+   free(list->arr);
+   list->arr = NULL;
+}
+
+int List_Size (List *list)
+{
+   return list->len;
+}
+
+void List_Append (List *list,
+                 void *item)
+{
+
+   // Some preliminary checks.
+   if (item == NULL)
+      return;
+   if (should_resize(list))
+      resize(list);
+   
+   // Smash it on the end.
+   void *last_slot = offset(list, list->len);
+   memcpy(last_slot, item, list->szitem);
+   list->len++;
+   
+}
+
+int List_IndexOf (List *list,
+                  void *item)
+{
+   
+   // Some preliminary checks.
+   if (item == NULL)
+      return -1;
       
-      // Not at this position. Keep moving along.
-      if (Comparison(list, value, next->dataPtr)) {
-         ListNode *tmp = next;
-         next = next->next;
-         prev = tmp;
-         continue;
-      }
-   
-      // Found it. Free the node, adjust the list, return 1.
-      struct ListNode *next_next = next->next;
-      _FreeNode(list, next);
-      prev->next = next_next;
-      list->length = list->length - 1;
-      return 1;
-
+   // Check each element in array.
+   int i;
+   for (i=0; i < list->len; i++) {
+      void *list_item = offset(list, i);
+      if (item_eq(list, list_item, item)) return 1;
    }
-
-   return 0; // Item not in list.
+   
+   // If you're down here, item not in the List.
+   return -1;
+   
 }
 
-void
-ListPrepend (struct List *list, void *value)
+int List_Contains (List *list,
+                   void *item)
+{
+   return List_IndexOf(list, item);
+}
+
+
+void *List_Get (List *list,
+                int index)
 {
 
-   // Allocate memory for node. Copy value across.
-   ListNode *node = malloc(sizeof (struct ListNode));
-   node->dataPtr = calloc(1, list->elemSize); // calloc to zero out any padding bytes.
-   memcpy(node->dataPtr, value, list->elemSize);
-
-   // Prepend onto list.
-   node->next = list->head;
-   list->head = node;
-   list->length = list->length + 1;
+   // Preliminary checks.
+   if (index < 0)
+      out_of_bounds();
+   if (index >= list->len)
+      return NULL;
+      
+   // Get item, copy it into a new thing, return it.
+   void *item = offset(list, index);
+   void *to_return = malloc(list->szitem);
+   memcpy(to_return, item, list->szitem);
+   return to_return;
 
 }
+
+int List_Del (List *list,
+               int index)
+{
+   
+   // Preliminary checks.
+   if (index < 0)
+      out_of_bounds();
+   if (index >= list->len)
+      return 0;
+   
+   // Get offset, zero out memory at that position.
+   void *curr = offset(list, index);
+   item_free(list, offset);
+   
+   // Move everything down.
+   int i;
+   for (i=index+1; i < list->len; i++) {
+      void *prev = offset;
+      curr = offset(list, i);
+      memcpy(prev, offset, list->szitem);
+   }
+   
+   // Update list.
+   list->len--;
+   return 1;
+   
+}
+
+int List_Remove (List *list,
+                 void *item)
+{
+   int index = List_IndexOf(list, item);
+   return List_Del(list, index);
+}
+                 
+
+
+
+
+
 

@@ -1,72 +1,89 @@
 
-   /**
-      Generic list. Has copy-by-value semantics.
-   **/
-typedef struct List List;
+typedef struct list List;
 
    /**
-      Check whether the list contains the specified value.
-      Equality is checked based on the custom comparator function you gave to the list.
-         list : list to check.
-         value : pointer to value to be checked.
-    **/
-int ListContains (List *list,
-                  void *value);
+      Construct a new list. Returns a pointer to the list.
+      It must be freed using ListFree.
+         initial_capacity : starting size of the list.
+         elem_size : size of the elements (in bytes) that will
+            be in the list.
+         cmp : a function which tells you how to compare two
+            elements in the list. This should return '0' if
+            two elements are identical.
+         free : a function telling you how to free the items
+            in the list. Will be called when you use List_Free. **/ 
+List * List_Make (int initial_capacity,
+                 int elem_size,
+                 int (*cmp)(void *, void*),
+                 void (*free)(void *));
 
    /**
-      Get the item associated with the specified value.
-      Equality is checked based on the custom comparator function you gave to the list.
-         ptr : location to some memory. The return value will be copied into here.
-         list : list to check.
-         value : pointer to value to be checked.
-    **/
-void ListGet (void *ptr,
-              List *list,
-              void *value);
-
+      Free the given list.
+         list : list to free. **/
+void List_Free (List *list);
+     
    /**
-      Get the first element in the list.
+      Get the size of the list.
          list : list to check.
     **/
-void ListHead (void *ptr, List *list);
+int List_Size (List *list);
+                    
+   /**
+      Append an item to the given list. If there is no size in
+      the list, it will be automatically resized.
+         list : list to append to.
+         item : item to append onto the list. **/
+void List_Append (List *list,
+                 void *item);
 
    /**
-      Prepend the item onto the list. The value at the given pointer is copied to a new
-      location in memory accessible only to the list, so the list has "copy-by-value"
-      semantics.
+      Check if the item is in the list and return the first index
+      where it is located. Your input is checked against each
+      item in the list using the comparator function you passed
+      in when constructing the list; otherwise it uses memcmp.
+         list : list to check through.
+         item : item you're searching for. **/
+int List_IndexOf (List *list,
+                  void *item);
+
+   /**
+      Check if the item is in the list. Returns a non-zero value
+      if it is. Your input is checked against each item in the
+      list using the comparator function you passed in when
+      constructing the list; otherwise it uses memcmp.
          list : list to check.
-         value : item to prepend.
-    **/
-void ListPrepend (List *list,
-                  void *value);
+         item : item you're searching for. **/
+int List_Contains (List *list,
+                   void *item);
 
    /**
-      Allocate memory for a new List of values and construct it.
-         elemSize : amount of memory each item in the List takes.
-         FreeFunc : a function that can be applied to items in the List in
-            order to free them. Specifies how memory is to be freed when
-            the List destroys itself.
-         Compare : a function which can be applied to two items in the List.
-            The function should return 0 if two items are equal.
-    **/
-List *ListMake (int elemSize,
-                void (*FreeFunc)(void *),
-                int (*Compare)(void *, void *));
+      Get the item in the list at the specified index. The item
+      is copied into a new portion of memory and given back to you,
+      so it is your responsibility to free it. Returns a NULL
+      pointer if there is no item at that index. Aborts if the
+      index is out of bounds.
+         list : list to check.
+         index : location to get the item from. **/
+void *List_Get (List *list,
+                int index);
                 
    /**
-      Tear down the list and free its memory. Each value in the list will
-      be freed also using the custom FreeFUnc that you specified when the list
-      was created.
-         list : List to delete.
-    **/
-void ListFree (List *list);
-
-int ListDel (struct List *list, void *value);
+      Delete the item at the specified index. Does nothing if
+      there is no item at that index. Aborts if the index is out
+      of bounds. Returns non-zero value if something was deleted.
+         list : list to delete form.
+         index : index to delete. **/
+int List_Del (List *list,
+               int index);
 
    /**
-      Return the number of elements in the list.
+      Find and remove the item from the list, if it exists. If
+      something was deleted the function returns non-zero value.
+      Your input is checked against each item in the list using
+      the comparator function you passed in when constructing the
+      list; otherwise it uses memcmp.
          list : list to check.
-    **/
-int ListSize (List *list);
-
-
+         item : item you're searching for. */
+int List_Remove (List *list,
+                 void *item);
+   
