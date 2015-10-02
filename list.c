@@ -27,16 +27,14 @@ static void resize (struct list *list);
 static inline int item_eq (struct list *list, void *item1, void *item2)
 {
    if (!list->cmp)
-      return memcmp(item1, item2, list->szitem);
+      return !memcmp(item1, item2, list->szitem);
    else
       return !(*(list->cmp))(item1, item2);
 }
 
 static inline void item_free (struct list *list, void *item)
 {
-   if (!list->free_item)
-      free(item);
-   else
+   if (list->free_item)
       (*(list->free_item))(item);
 }
 
@@ -108,7 +106,8 @@ void List_Free (List *list)
    int i;
    for (i=0; i < list->len; i++) {
       void *item = offset(list, i);
-      (*free_item)(item);
+      item_free(list, item);
+      memset(item, 0, list->szitem);
    }
    
    free(list->arr);
@@ -149,7 +148,8 @@ int List_IndexOf (List *list,
    int i;
    for (i=0; i < list->len; i++) {
       void *list_item = offset(list, i);
-      if (item_eq(list, list_item, item)) return 1;
+      int r = item_eq(list, list_item, item);
+      if (item_eq(list, list_item, item)) return i;
    }
    
    // If you're down here, item not in the List.
@@ -160,7 +160,8 @@ int List_IndexOf (List *list,
 int List_Contains (List *list,
                    void *item)
 {
-   return List_IndexOf(list, item);
+   int idx = List_IndexOf(list, item);
+   return idx >= 0 && idx < list->len;
 }
 
 
@@ -192,17 +193,21 @@ int List_Del (List *list,
    if (index >= list->len)
       return 0;
    
-   // Get offset, zero out memory at that position.
+   // Get offset, free stuff at that position.
    void *curr = offset(list, index);
    item_free(list, offset);
    
    // Move everything down.
    int i;
    for (i=index+1; i < list->len; i++) {
-      void *prev = offset;
+      void *prev = curr;
       curr = offset(list, i);
-      memcpy(prev, offset, list->szitem);
+      memcpy(prev, curr, list->szitem);
    }
+
+   // Zero out stuff at last position.
+   curr = offset(list, i);
+   memset(curr, 0, list->szitem);
    
    // Update list.
    list->len--;

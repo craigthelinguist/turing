@@ -260,6 +260,84 @@ MU_TEST(test_aliasing_2) {
 
 }
 
+MU_TEST(test_del) {
+
+   // Initialise list for testing.
+   list = List_Make(10, sizeof(int), NULL, NULL);
+   int x, y;
+   x = 4; y = 11;
+   List_Append(list, &x);
+   List_Append(list, &y);
+   SIZE_TEST(2);
+   
+   // Delete stuff. Make sure elements get shifted down.
+   List_Del(list, 0);
+   SIZE_TEST(1);
+   MISSING_TEST(&x);
+   INDEX_TEST(&x, -1);
+   CONTAIN_TEST(&y);
+   INDEX_TEST(&y, 0);
+
+   // Put stuff back in. Make sure in right order.
+   List_Append(list, &x);
+   SIZE_TEST(2);
+   CONTAIN_TEST(&x);
+   INDEX_TEST(&x, 1);
+
+   // Remove everything by searching for value, not name.
+   List_Remove(list, &x);
+   SIZE_TEST(1);
+   CONTAIN_TEST(&y);
+   MISSING_TEST(&x);
+
+   // Remove other thing.
+   List_Remove(list, &y);
+   SIZE_TEST(0);
+   MISSING_TEST(&y);
+
+}
+
+MU_TEST(test_del_2) {
+
+   // Initialise list.
+   list = List_Make(5, sizeof(int), NULL, NULL);
+   int ints[] = { 0, 1, 2, 3, 4 };
+   int i;
+   for (i=0; i < 5; i++) {
+      List_Append(list, &ints[i]);   
+   }
+   SIZE_TEST(5);
+
+   // Delete some stuff, make sure everything shifted down.
+   // After deletion should look like: [1,2,3]
+   List_Remove(list, &ints[0]);
+   List_Remove(list, &ints[4]);
+   SIZE_TEST(3);
+   for (i=1; i<=3; i++) CONTAIN_TEST(&ints[i]);
+   MISSING_TEST(&ints[0]);
+   MISSING_TEST(&ints[4]);
+   INDEX_TEST(&ints[1], 0);
+   INDEX_TEST(&ints[2], 1);
+   INDEX_TEST(&ints[3], 2);
+
+   // Add some more stuff.
+   // List should look like: [1,2,3,0,4]
+   List_Append(list, &ints[0]);
+   List_Append(list, &ints[4]);
+   SIZE_TEST(5);
+   INDEX_TEST(&ints[0], 3);
+   INDEX_TEST(&ints[4], 4);
+   CONTAIN_TEST(&ints[0]);
+   CONTAIN_TEST(&ints[4]);
+
+}
+
+MU_TEST(test_del_3) {
+}
+
+MU_TEST(test_del_4) {
+}
+
    /**
       Add enough things to cause the table to have to rebuild. Make sure
       everything still works, in correct order, etc. **/
@@ -313,6 +391,13 @@ MU_TEST(test_big) {
       CONTAIN_TEST(&ints[i]);
    }
 
+   // Remove everything
+   for (i=0; i < NUM_ITEMS; i++) {
+      List_Del(list, 0);   
+   }
+   SIZE_TEST(0);
+   List_Free(list);
+
 }
 
 MU_TEST_SUITE(test_suite) {
@@ -327,6 +412,10 @@ MU_TEST_SUITE(test_suite) {
    MU_RUN_TEST(test_aliasing_2);
    MU_RUN_TEST(test_rebuild);
    MU_RUN_TEST(test_big);
+   MU_RUN_TEST(test_del);
+   MU_RUN_TEST(test_del_2);
+   MU_RUN_TEST(test_del_3);
+   MU_RUN_TEST(test_del_4);
 }
 
 int main(int argc, char *argv[]) {
