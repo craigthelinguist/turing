@@ -5,17 +5,21 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "minunit.h"
-
 #include "list.h"
 
+// Unit testing macros and imports.
+// ======================================================================
 
-
+#include "minunit.h"
 #define SIZE_TEST(x) mu_assert(List_Size(list) == x, "List should have 3 things in it.");
 #define NULL_CHECK(x) mu_assert(x != NULL, "Element shouldn't be null.");
 #define INDEX_TEST(x, y) mu_assert(List_IndexOf(list, x) == y, "Element in wrong index.");
 #define CONTAIN_TEST(x) mu_assert(List_Contains(list, x), "Element not found in list.");
 #define MISSING_TEST(x) mu_assert(!List_Contains(list, x), "Element should be missing.");
+
+
+// Structs and functions for unit testing.
+// ======================================================================
 
 struct Person {
    char *name;
@@ -24,7 +28,7 @@ struct Person {
 
    /**
       Checks if two numbers are equal to within a certain threshold. **/
-int fuzzy_eq (void *n1, void *n2)
+static int fuzzy_eq (void *n1, void *n2)
 {
    int x, y;
    x = *(int*)n1; y = *(int*)n2;
@@ -35,32 +39,44 @@ int fuzzy_eq (void *n1, void *n2)
 
    /**
       Checks if two persons are equal by whether they have the same name. **/
-int name_eq (void *p, void *q)
+static int name_eq (void *p, void *q)
 {
    struct Person *p1 = (struct Person *)p;
    struct Person *q1 = (struct Person *)q;
    return strcmp(p1->name, q1->name);
 }
 
-List *list;
 
-void Setup () {
+
+// Set up stuff, testing variables.
+// ======================================================================
+
+static List *list;
+
+static void Setup () {
    list = NULL;
 }
 
-void Teardown () {
+static void Teardown () {
    list = NULL;
 }
 
-   /*
+
+// Unit tests.
+// ======================================================================
+
+   /**
       Check the constructor gives you a list with a sensible initial state.
-   */
+   **/
 MU_TEST(test_constructor) {
    list = List_Make(10, sizeof(int), NULL, NULL);
    NULL_CHECK(list);
    SIZE_TEST(0);
 }
 
+   /**
+      Test adding and retrieving a single element.
+   **/
 MU_TEST(test_add) {
 
    // Construct a list and add x.
@@ -74,6 +90,10 @@ MU_TEST(test_add) {
    CONTAIN_TEST(&x);
 }
 
+   /**
+      Test adding and retrieving multiple elements. Check that their location
+      in the list matches how they were added.
+   **/
 MU_TEST(test_add_2) {
    
    // Make a list, add multiple things.
@@ -186,6 +206,10 @@ MU_TEST(test_add_5) {
 
 }
 
+   /**
+      Test aliasing. That is, add some stuff, pull it out again, modify
+      the thing that you pulled out, and make sure it doesn't affect the
+      original thing that was added, or the copy stored in the list. **/
 MU_TEST(test_aliasing) {
 
    // Add to list, pull it out again.
@@ -208,6 +232,8 @@ MU_TEST(test_aliasing) {
       
 }
 
+   /**
+      Test aliasing with structs. **/
 MU_TEST(test_aliasing_2) {
 
    // Add to list, pull it out again.
@@ -234,6 +260,61 @@ MU_TEST(test_aliasing_2) {
 
 }
 
+   /**
+      Add enough things to cause the table to have to rebuild. Make sure
+      everything still works, in correct order, etc. **/
+MU_TEST(test_rebuild) {
+
+   // Add stuff, get ready to resize.
+   list = List_Make(10, sizeof (int), NULL, NULL);
+   int ints[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+   int i;
+   for (i=0; i < 10; i++) {
+      List_Append(list, &ints[i]);
+   }
+   for (i=0; i < 10; i++) {
+      INDEX_TEST(&ints[i], i);
+      CONTAIN_TEST(&ints[i]);
+   }
+   SIZE_TEST(10);
+   
+   // Add one more thing. Check everything still in right order.
+   int z = 50;
+   List_Append(list, &z);
+   for (i=0; i < 10; i++) {
+      INDEX_TEST(&ints[i], i);
+      CONTAIN_TEST(&ints[i]);
+   }
+   INDEX_TEST(&z, 10);
+   CONTAIN_TEST(&z);
+   SIZE_TEST(11);
+
+}
+
+   /**
+      Add a non-trivial amount of items.
+   **/
+MU_TEST(test_big) {
+
+   // Add heaps of stuff.
+   list = List_Make(10, sizeof (int), NULL, NULL);
+   const int NUM_ITEMS = 1000;
+   int ints[NUM_ITEMS];
+   int i;
+   for (i=0; i < NUM_ITEMS; i++) {
+      ints[i] = i;
+      List_Append(list, &ints[i]);
+   }
+   
+   // Check things are in there.
+   SIZE_TEST(NUM_ITEMS);
+   for (i=0; i < NUM_ITEMS; i++) {
+      INDEX_TEST(&ints[i], i);
+      CONTAIN_TEST(&ints[i]);
+   }
+
+}
+
 MU_TEST_SUITE(test_suite) {
    MU_SUITE_CONFIGURE(&Setup, &Teardown);
    MU_RUN_TEST(test_constructor);
@@ -244,6 +325,8 @@ MU_TEST_SUITE(test_suite) {
    MU_RUN_TEST(test_add_5);
    MU_RUN_TEST(test_aliasing);
    MU_RUN_TEST(test_aliasing_2);
+   MU_RUN_TEST(test_rebuild);
+   MU_RUN_TEST(test_big);
 }
 
 int main(int argc, char *argv[]) {
