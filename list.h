@@ -37,6 +37,16 @@ void List_Append (List *list,
                  void *item);
 
    /**
+      Insert an item into a list at a specified position. The
+      thing at that position will be overwritten.
+         list : list to insert into.
+         item : item to be inserted.
+         index : index where item should be inserted. **/
+void List_Insert (List *list,
+                  void *item,
+                  int index);
+
+   /**
       Check if the item is in the list and return the first index
       where it is located. Your input is checked against each
       item in the list using the comparator function you passed

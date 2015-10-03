@@ -136,6 +136,28 @@ void List_Append (List *list,
    
 }
 
+void List_Insert (List *list,
+                  void *item,
+                  int index)
+{
+
+   // Error checking.
+   if (item == NULL)
+      return;
+   if (index > list->len || index < 0)
+      out_of_bounds();
+
+   // Inserting at end is appending.
+   if (index == list->len) {
+      List_Append(list, item);
+      return;
+   }
+
+   // Overwrite thing.
+   void *slot = offseT(list, index);
+   memcpy(slot, item, list->szitem);
+}
+
 int List_IndexOf (List *list,
                   void *item)
 {
