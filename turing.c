@@ -3,8 +3,7 @@
 #include <ncurses.h>
 
 #include "list.h"
-#include "hashmap.h"
-#include "word.h"
+#include "map.h"
 
 #define TAPE_SIZE 100
 
@@ -32,9 +31,6 @@ struct Tape {
 struct Machine {
    int head;
    int state;
-   HashMap *trans_lookup;
-   HashMap *input_lookup;
-   HashMap *output_lookup;
    struct Tape *leftmost;
    struct Tape *current;
 };
@@ -123,29 +119,6 @@ MvLeft (struct Machine *m) {
       struct Tape *prev_tape = MakeTape();
       m->current->prev = prev_tape;
       m->current = prev_tape;
-   }
-}
-
-void
-Step (struct Machine *m) {
-   if (m->state == HALT) return;
-   void *ptr = HashMapGet (m->output_lookup, &(m->state));
-   if (ptr == NULL) abort(); // No such state exists.
-   int instr = *((int *)ptr);   
-   switch (instr) {
-   
-      case LEFT:
-         MvLeft(m);
-         break;
-
-      case RIGHT:
-         MvRight(m);
-         break;
-
-      default:
-         // should actually print char here         
-         abort();
-
    }
 }
 

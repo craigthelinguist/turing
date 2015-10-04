@@ -58,35 +58,66 @@ static inline struct bucket free_bucket (struct bucket bucket);
 // Internal functions.
 // ======================================================================
 
+   /**
+      Run an item through the hash function of a map. This is NOT guaranteed
+      to return a valid index to the map's table (you should mod the length of
+      the table), but it will return a non-negative value.
+         map : map you're performing the hash for.
+         key : thing to be hashed.
+    **/
 static unsigned int hash (struct map *map, void *key)
 {
    if (map->hash) return map->hash(key);
    else return 0;
 }
 
+   /**
+      Whether the table should be rebuilt. This is based on the ratio of
+      items in the table to the capacity of the table.
+         map : map to check.
+    **/
 static int should_resize (struct map *map)
 {
    float density = (float)map->items / (float)map->capacity;
    return density > 0.75;
 }
 
+   /**
+      Initialise a new bucket in the map's table at the given index. This
+      involves allocating memory for the two lists that the bucket refers to.
+         map : map to initialise bucket for.
+         index : index where the bucket should be created.
+    **/
 static inline void init_bucket (struct map *map, int index)
 {
    map->table[index].keys = List_Make(10, map->szkey, map->keycmp, map->keyfree);
    map->table[index].vals = List_Make(10, map->szval, map->valcmp, map->valfree);
 }
 
+   /**
+      Free memory referred to by a given bucket.
+         bucket : bucket whose members should be freed.
+    **/
 static inline struct bucket free_bucket (struct bucket bucket)
 {
    List_Free(bucket.keys);
    List_Free(bucket.vals);
 }
 
+   /**
+      Check if a bucket at a specific index has been initialised.
+         map : map to check.
+         index : index of bucket to check.
+    **/
 static inline int bucket_exists (struct map *map, int index)
 {
    return memcmp(emptyblock, map->table + index, sizeof (struct bucket));
 }
 
+   /**
+      Rebuild the map's table. This extends the capacity of the table and copy
+      everything across by rehashing 
+    **/
 static void rebuild (struct map *map)
 {
 
@@ -95,11 +126,14 @@ static void rebuild (struct map *map)
    struct bucket *new_table = calloc(sizeof (struct bucket), new_capacity);
    struct bucket *old_table = map->table;
 
-   // Copy all buckets across.
+   // Copy all buckets across, rehashing each as you go.
    int i;
    for (i=0; i < map->capacity; i++) {
       if (!bucket_exists(map, i)) continue;
-      memcpy(new_table + i, old_table + i, sizeof (struct bucket));
+      struct bucket bucket = map->table[i];
+      void *key = List_Get(bucket.keys, 0);
+      int k = hash(map, key) % new_capacity;
+      memcpy(new_table + k, old_table + i, sizeof (struct bucket));
    }
 
    // Update map.

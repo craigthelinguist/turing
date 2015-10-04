@@ -1,2 +1,2 @@
 all: turing.c
-	gcc -o tm turing.c list.c -l ncurses
+	gcc -o tm turing.c map.c list.c -l ncurses
