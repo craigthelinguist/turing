@@ -1,7 +1,7 @@
 
 
 
-#include "stdlib.h"
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -11,7 +11,7 @@
 // ======================================================================
 
 #include "minunit.h"
-#define SIZE_TEST(x) mu_assert(List_Size(list) == x, "List should have 3 things in it.");
+#define SIZE_TEST(x) mu_assert(List_Size(list) == x, "Wrong number of items in list.");
 #define NULL_CHECK(x) mu_assert(x != NULL, "Element shouldn't be null.");
 #define INDEX_TEST(x, y) mu_assert(List_IndexOf(list, x) == y, "Element in wrong index.");
 #define CONTAIN_TEST(x) mu_assert(List_Contains(list, x), "Element not found in list.");

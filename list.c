@@ -154,7 +154,7 @@ void List_Insert (List *list,
    }
 
    // Overwrite thing.
-   void *slot = offseT(list, index);
+   void *slot = offset(list, index);
    memcpy(slot, item, list->szitem);
 }
 

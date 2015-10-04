@@ -3,7 +3,8 @@
 #include <string.h>
 
 #include "list.h"
-#include "hashmap.h"
+#include "map.h"
+
 
 // Constants.
 // ======================================================================
@@ -65,7 +66,7 @@ static unsigned int hash (struct map *map, void *key)
 
 static int should_resize (struct map *map)
 {
-   float density = map->items / map->capacity;
+   float density = (float)map->items / (float)map->capacity;
    return density > 0.75;
 }
 
@@ -142,7 +143,7 @@ Map *Map_Make (int init_capacity,
    map->valfree = freeVals;
    map->valcmp = cmpVals;
    map->keycmp = cmpKeys;
-   struct bucket *table = calloc(sizeof (struct bucket), init_capacity);
+   map->table = calloc(init_capacity, sizeof (struct bucket));
    return map;
 }
 
@@ -155,6 +156,7 @@ void Map_Free (Map *map)
 {
    int i;
    for (i=0 ; i < map->capacity; i++) {
+      if (!bucket_exists(map, i)) continue;
       struct bucket buck = map->table[i];
       List_Free(buck.keys);
       List_Free(buck.vals);
@@ -216,11 +218,11 @@ void Map_Put (Map *map, void *key, void *val)
 {
 
    // Check if it's time to resize.
-   if (should_resize)
+   if (should_resize(map))
       rebuild(map);
-
+      
    // Find bucket where (key, val) should go.
-   int hash_index = hash(map, key) & map->capacity;
+   int hash_index = hash(map, key) % map->capacity;
    if (!bucket_exists(map, hash_index))
       init_bucket(map, hash_index);
    struct bucket *buck = map->table + hash_index;  
@@ -232,6 +234,7 @@ void Map_Put (Map *map, void *key, void *val)
    if (key_index == -1) {
       List_Append(buck->keys, key);
       List_Append(buck->vals, val);   
+      map->items += 1;
    }
 
    // Overwrite (key, val) if it already exists.
@@ -239,9 +242,6 @@ void Map_Put (Map *map, void *key, void *val)
       List_Insert(buck->keys, key, key_index);
       List_Insert(buck->vals, val, key_index);   
    }
-
-   // Update map.
-   map->items += 1;
 
 }
 
