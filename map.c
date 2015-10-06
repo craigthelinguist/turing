@@ -67,8 +67,9 @@ static inline struct bucket free_bucket (struct bucket bucket);
     **/
 static unsigned int hash (struct map *map, void *key)
 {
-   if (map->hash) return map->hash(key);
-   else return 0;
+   unsigned int r;
+   if (map->hash) r = map->hash(key);
+   else r = 0; // default hash
 }
 
    /**

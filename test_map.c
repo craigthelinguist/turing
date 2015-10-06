@@ -36,6 +36,13 @@ unsigned int BadHash (void *i1)
    return 0;
 }
 
+unsigned int IdentityHash (void *i1)
+{
+   int i = *(int *)i1;
+   if (i < 0) return -i;
+   else return i;
+}
+
 void
 IntToIntMap (unsigned int (*Hash)(void *))
 {
@@ -119,6 +126,48 @@ MU_TEST (test_badhash_collision) {
    mu_assert(*r2 == v2, "Should be able to retrieve value from key.");
 }
 
+MU_TEST (test_identityhash) {
+
+   // Make a map, put a bunch of stuff into it.
+   IntToIntMap(&IdentityHash);
+   int ints[] = { 0, 2, 4, 6, 8 };
+   int i;
+   for (i=0 ; i < 5; i++) {
+      int dub = ints[i] * 2;
+      Map_Put(map, &ints[i], &dub);
+   }
+
+   // Check map is allg
+   SIZE_TEST(5);
+   for (i=0 ; i < 5; i++) {
+      CONTAINS_TEST(&ints[i]);
+      int *r = Map_Get(map, &ints[i]);
+      mu_assert(*r == ints[i] * 2, "Should retrieve correct value from key.");
+   }
+
+}
+
+MU_TEST (test_outofbounds) {
+   
+   // Make a map, but some stuff in it. The hash function will hash -ve out of
+   // bounds values so map has to be able to handle it.
+   IntToIntMap(&IdentityHash);
+   int ints[] = { 10, 15, 25, 50 };
+   int i;
+   for (i=0; i < 4; i++) {
+      Map_Put(map, &ints[i], &ints[i]);   
+   }
+
+   // Check map is allg.
+   SIZE_TEST(4);
+   for (i=0; i < 4; i++) {
+      CONTAINS_TEST(&ints[i]);
+      int *r = Map_Get(map, &ints[i]);
+      mu_assert(*r == ints[i], "Should retrieve correct value from key.");
+   }
+
+}
+
 // Running everything.
 // ======================================================================
 
@@ -129,6 +178,8 @@ MU_TEST_SUITE (test_suite)
    MU_RUN_TEST(test_constructor);
    MU_RUN_TEST(test_badhash_put);
    MU_RUN_TEST(test_badhash_overwrite);
+   MU_RUN_TEST(test_identityhash);
+   MU_RUN_TEST(test_outofbounds);
 }
 
 int main (int argc, char **argv)
