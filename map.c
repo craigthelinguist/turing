@@ -6,12 +6,6 @@
 #include "map.h"
 
 
-// Constants.
-// ======================================================================
-
-const int INIT_CAPACITY = 10;
-
-
 // Typedefs.
 // ======================================================================
 
@@ -124,8 +118,10 @@ static void rebuild (struct map *map)
 
    // Allocate memory for new table.
    int new_capacity = map->capacity * 2;
+   printf("new capacity is %d\n", new_capacity);
    struct bucket *new_table = calloc(sizeof (struct bucket), new_capacity);
    struct bucket *old_table = map->table;
+
 
    // Copy all buckets across, rehashing each as you go.
    int i;
@@ -138,8 +134,7 @@ static void rebuild (struct map *map)
    }
 
    // Update map.
-   map->capacity = new_capacity;
-
+   map->capacity = map->capacity * 2;
 }
 
 

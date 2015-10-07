@@ -24,7 +24,9 @@
 
 static Map *map;
 static const int szInt = sizeof(int);
+static void Setup () {}
 static void Reset () {
+   Map_Free(map);
    map = NULL;
 }
 
@@ -53,7 +55,6 @@ MU_TEST (test_constructor) {
    IntToIntMap(&BadHash);
    NULL_CHECK(map);
    SIZE_TEST(0);
-   Map_Free(map);
 }
 
 MU_TEST (test_badhash_put) {
@@ -71,6 +72,7 @@ MU_TEST (test_badhash_put) {
    // Should be able to retrieve value from key.
    int *result = Map_Get(map, &k);
    mu_assert(*result == v, "Should be able to retrieve value from key.");
+   free(result);
 
 }
 
@@ -89,7 +91,8 @@ MU_TEST (test_badhash_overwrite) {
    // Should be able to retrieve value from key.
    int *result = Map_Get(map, &k);
    mu_assert(*result == v, "Should be able to retrieve value from key.");
-   
+   free(result);   
+
    // Add another value with same key.
    int v2 = 100;
    Map_Put(map, &k, &v2);
@@ -101,7 +104,8 @@ MU_TEST (test_badhash_overwrite) {
    // Value retrieved should be different.
    result = Map_Get(map, &k);
    mu_assert(*result == v2, "Should have updated value in map.");
-   
+   free(result);
+
 }
 
 MU_TEST (test_badhash_collision) {
@@ -124,6 +128,9 @@ MU_TEST (test_badhash_collision) {
    int *r2 = Map_Get(map, &k2);
    mu_assert(*r1 == v1, "Should be able to retrieve value from key.");
    mu_assert(*r2 == v2, "Should be able to retrieve value from key.");
+   free(r1);
+   free(r2);
+
 }
 
 MU_TEST (test_identityhash) {
@@ -143,6 +150,7 @@ MU_TEST (test_identityhash) {
       CONTAINS_TEST(&ints[i]);
       int *r = Map_Get(map, &ints[i]);
       mu_assert(*r == ints[i] * 2, "Should retrieve correct value from key.");
+      free(r);
    }
 
 }
@@ -164,6 +172,33 @@ MU_TEST (test_outofbounds) {
       CONTAINS_TEST(&ints[i]);
       int *r = Map_Get(map, &ints[i]);
       mu_assert(*r == ints[i], "Should retrieve correct value from key.");
+      free(r);
+   }
+
+}
+
+MU_TEST (test_rebuild) {
+   
+   // Make a map, put enough stuff in it so the table has to rebuild.
+   IntToIntMap(&IdentityHash);
+   int ints[100];
+   int squares[100];
+   int i;
+   for (i = 0; i < 100; i++) {
+      ints[i] = i;
+      squares[i] = i * i;
+      Map_Put(map, &ints[i], &squares[i]);
+   }
+
+   // Size should be 100.
+   SIZE_TEST(100);
+
+   // Should be able to get everything back out.
+   for (i=0; i < 100; i++) {
+      CONTAINS_TEST(&ints[i]);
+      int *r = Map_Get(map, &ints[i]);
+      mu_assert(*r == squares[i], "Should retrieve correct value from key."); 
+      free(r);  
    }
 
 }
@@ -174,12 +209,13 @@ MU_TEST (test_outofbounds) {
 
 MU_TEST_SUITE (test_suite) 
 {
-   MU_SUITE_CONFIGURE(&Reset, &Reset);
+   MU_SUITE_CONFIGURE(&Setup, &Reset);
    MU_RUN_TEST(test_constructor);
    MU_RUN_TEST(test_badhash_put);
    MU_RUN_TEST(test_badhash_overwrite);
    MU_RUN_TEST(test_identityhash);
    MU_RUN_TEST(test_outofbounds);
+   MU_RUN_TEST(test_rebuild);
 }
 
 int main (int argc, char **argv)
