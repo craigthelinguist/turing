@@ -1,6 +1,5 @@
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 
 #include "map.h"
@@ -180,21 +179,23 @@ MU_TEST (test_outofbounds) {
 MU_TEST (test_rebuild) {
    
    // Make a map, put enough stuff in it so the table has to rebuild.
+   const int NUM_TEST = 100;
+
    IntToIntMap(&IdentityHash);
-   int ints[100];
-   int squares[100];
+   int ints[NUM_TEST];
+   int squares[NUM_TEST];
    int i;
-   for (i = 0; i < 100; i++) {
+   for (i = 0; i < NUM_TEST; i++) {
       ints[i] = i;
       squares[i] = i * i;
       Map_Put(map, &ints[i], &squares[i]);
    }
 
    // Size should be 100.
-   SIZE_TEST(100);
+   SIZE_TEST(NUM_TEST);
 
    // Should be able to get everything back out.
-   for (i=0; i < 100; i++) {
+   for (i=0; i < NUM_TEST; i++) {
       CONTAINS_TEST(&ints[i]);
       int *r = Map_Get(map, &ints[i]);
       mu_assert(*r == squares[i], "Should retrieve correct value from key."); 
