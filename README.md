@@ -13,10 +13,12 @@ IMPORTS     ::= Imports: [IDEN]+ [,IDEN]*.
 
 DEFINITION  ::= IDEN: [CLAUSE]+ 
 CLAUSE      ::= [NUMBER | LETTER | blank] -> ACTION, IDEN.
+
 ACTION      ::= PRIMITIVE | INVOCATION
 PRIMITIVE   ::= left | right | [NUMBER | LETTER | blank]
 INVOCATION  ::= IDEN.IDEN([ARGLIST]?)
 ARGLIST     ::= SYMBOL | SYMBOL,ARGLIST
+
 SYMBOL      ::= NUMBER | LETTER | BLANK
 IDEN        ::= [a-zA-Z0-9]+
 WORD        ::= [a-zA-Z]+
