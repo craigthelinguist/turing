@@ -115,13 +115,14 @@ MU_TEST (test_badhash_collision) {
    k1 = 10; k2 = -10;
    v1 = 100; v2 = -100;
    Map_Put(map, &k1, &v1);
-   Map_Put(map, &v1, &v2);
-   
+   Map_Put(map, &k2, &v2);
+ 
+ 
    // Size of map should be affected.
    SIZE_TEST(2);
    CONTAINS_TEST(&k1);
    CONTAINS_TEST(&k2);
-   
+
    // Should be able to retrieve values from keys.
    int *r1 = Map_Get(map, &k1);
    int *r2 = Map_Get(map, &k2);
@@ -132,6 +133,84 @@ MU_TEST (test_badhash_collision) {
 
 }
 
+MU_TEST (test_default_put)
+{
+   
+   // Make a map, put a single pair in it.
+   IntToIntMap(NULL);
+   int k, v;
+   k = -234892374; v = -23490123;
+   Map_Put(map, &k, &v);
+   
+   // Size of map should be affected.
+   SIZE_TEST(1);
+   CONTAINS_TEST(&k);
+   
+   // Should be able to retrieve value from key.
+   int *result = Map_Get(map, &k);
+   mu_assert(*result == v, "Should be able to retrieve value from key.");
+   free(result);
+
+}
+
+
+MU_TEST (test_default_overwrite) {
+   
+   // Make a map, put a single pair in it.
+   IntToIntMap(NULL);
+   int k, v;
+   k = 10; v = 20;
+   Map_Put(map, &k, &v);
+   
+   // Size of map should be affected.
+   SIZE_TEST(1);
+   CONTAINS_TEST(&k);
+   
+   // Should be able to retrieve value from key.
+   int *result = Map_Get(map, &k);
+   mu_assert(*result == v, "Should be able to retrieve value from key.");
+   free(result);   
+
+   // Add another value with same key.
+   int v2 = 100;
+   Map_Put(map, &k, &v2);
+   
+   // Should not have affected map and key.
+   SIZE_TEST(1);
+   CONTAINS_TEST(&k);
+   
+   // Value retrieved should be different.
+   result = Map_Get(map, &k);
+   mu_assert(*result == v2, "Should have updated value in map.");
+   free(result);
+
+}
+
+MU_TEST (test_default_collision) {
+   
+   // Make a map, put two pairs in it.
+   IntToIntMap(NULL);
+   int k1, k2, v1, v2;
+   k1 = 99; k2 = 89; // these hash to the same thing, mod 10, with djp2.
+   v1 = 100; v2 = -100;
+   Map_Put(map, &k1, &v1);
+   Map_Put(map, &k2, &v2);
+ 
+ 
+   // Size of map should be affected.
+   SIZE_TEST(2);
+   CONTAINS_TEST(&k1);
+   CONTAINS_TEST(&k2);
+
+   // Should be able to retrieve values from keys.
+   int *r1 = Map_Get(map, &k1);
+   int *r2 = Map_Get(map, &k2);
+   mu_assert(*r1 == v1, "Should be able to retrieve value from key.");
+   mu_assert(*r2 == v2, "Should be able to retrieve value from key.");
+   free(r1);
+   free(r2);
+
+}
 MU_TEST (test_identityhash) {
 
    // Make a map, put a bunch of stuff into it.
@@ -179,9 +258,9 @@ MU_TEST (test_outofbounds) {
 MU_TEST (test_rebuild) {
    
    // Make a map, put enough stuff in it so the table has to rebuild.
-   const int NUM_TEST = 100;
+   const int NUM_TEST = 1000;
 
-   IntToIntMap(&IdentityHash);
+   IntToIntMap(NULL);
    int ints[NUM_TEST];
    int squares[NUM_TEST];
    int i;
@@ -207,8 +286,8 @@ MU_TEST (test_rebuild) {
 MU_TEST (stress_test) {
 
    // Testing parameters.
-   const int NUM_TEST = 1000;
-   IntToIntMap(&IdentityHash); // Default hash segfaults!
+   const int NUM_TEST = 5000;
+   IntToIntMap(NULL); // Default hash segfaults!
    
    // Populate map.
    int ints[NUM_TEST];
@@ -224,6 +303,8 @@ MU_TEST (stress_test) {
    SIZE_TEST(NUM_TEST);
 
    // Should be able to get everything back out.
+   CONTAINS_TEST(&ints[256]);
+  
    for (i=0; i < NUM_TEST; i++) {
       CONTAINS_TEST(&ints[i]);
       int *r = Map_Get(map, &ints[i]);
@@ -233,6 +314,7 @@ MU_TEST (stress_test) {
 
 }
 
+
 // Running everything.
 // ======================================================================
 
@@ -240,11 +322,27 @@ MU_TEST (stress_test) {
 MU_TEST_SUITE (test_suite) 
 {
    MU_SUITE_CONFIGURE(&Setup, &Reset);
+
+   // Making a map.
    MU_RUN_TEST(test_constructor);
+
+   // Testing an arbitrary, crappy hash.
    MU_RUN_TEST(test_badhash_put);
    MU_RUN_TEST(test_badhash_overwrite);
+   MU_RUN_TEST(test_badhash_collision);
+
+   // Another bad hash.
    MU_RUN_TEST(test_identityhash);
+
+   // Testing default multiplicative hash.
+   MU_RUN_TEST(test_default_put);
+   MU_RUN_TEST(test_default_overwrite);
+   MU_RUN_TEST(test_default_collision);
+
+   // Able to deal with hashes that return -ve values.
    MU_RUN_TEST(test_outofbounds);
+   
+   // Dealing with lots of stuff.
    MU_RUN_TEST(test_rebuild);
    MU_RUN_TEST(stress_test);
 }

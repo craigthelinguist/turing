@@ -1,9 +1,25 @@
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
+// Header files.
+// ======================================================================
+
+#ifndef STDLIB_H
+   #include <stdlib.h>
+#endif
+
+#ifndef STRING_H
+   #include <string.h>
+#endif
+
+#ifndef STDIO_H
+   #include <stdio.h>
+#endif
 
 #include "list.h"
+
+
+
+// Definitions.
+// ======================================================================
 
 typedef int (*CmpFunc)(void *, void*);
 typedef void (*FreeFunc)(void *);
@@ -20,6 +36,8 @@ struct list {
 static inline int item_eq (struct list *list, void *item1, void *item2);
 static inline int should_resize (struct list *list);
 static void resize (struct list *list);
+
+
 
 // Internal functions.
 // ============================================================
@@ -80,6 +98,8 @@ static inline void out_of_bounds ()
    abort();
 }
 
+
+
 // Public functions.
 // ============================================================
 
@@ -102,7 +122,6 @@ void List_Free (List *list)
 {
 
    // Go through list freeing everything.
-   FreeFunc free_item = list->free_item;
    int i;
    for (i=0; i < list->len; i++) {
       void *item = offset(list, i);
@@ -170,7 +189,6 @@ int List_IndexOf (List *list,
    int i;
    for (i=0; i < list->len; i++) {
       void *list_item = offset(list, i);
-      int r = item_eq(list, list_item, item);
       if (item_eq(list, list_item, item)) return i;
    }
    
@@ -186,7 +204,6 @@ int List_Contains (List *list,
    return idx >= 0 && idx < list->len;
 }
 
-
 void *List_Get (List *list,
                 int index)
 {
@@ -196,6 +213,8 @@ void *List_Get (List *list,
       out_of_bounds();
    if (index >= list->len)
       return NULL;
+   if (list == NULL)
+      abort();
       
    // Get item, copy it into a new thing, return it.
    void *item = offset(list, index);
@@ -243,10 +262,4 @@ int List_Remove (List *list,
    int index = List_IndexOf(list, item);
    return List_Del(list, index);
 }
-                 
-
-
-
-
-
-
+         
