@@ -1,4 +1,4 @@
-This is a Turing machine simulator. It has its own language for specifying machines. These Turing machines are unbounded in the amount of tape they can use and are also able to call other Turing machines as subroutines. The interactive interperter allows you to run Turing machines and watch their computation step-by-step.
+This is a Turing machine simulator. It has its own language for specifying machines. These Turing machines are unbounded in the amount of tape they can use and are also able to call other Turing machines as subroutines. The interactive interpreter lets you watch their step-by-step computation.
 
 Grammar
 =======
