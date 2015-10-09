@@ -204,6 +204,35 @@ MU_TEST (test_rebuild) {
 
 }
 
+MU_TEST (stress_test) {
+
+   // Testing parameters.
+   const int NUM_TEST = 1000;
+   IntToIntMap(&IdentityHash); // Default hash segfaults!
+   
+   // Populate map.
+   int ints[NUM_TEST];
+   int squares[NUM_TEST];
+   int i;
+   for (i = 0; i < NUM_TEST; i++) {
+      ints[i] = i;
+      squares[i] = i * i;
+      Map_Put(map, &ints[i], &squares[i]);
+   }
+
+   // Size should be 100.
+   SIZE_TEST(NUM_TEST);
+
+   // Should be able to get everything back out.
+   for (i=0; i < NUM_TEST; i++) {
+      CONTAINS_TEST(&ints[i]);
+      int *r = Map_Get(map, &ints[i]);
+      mu_assert(*r == squares[i], "Should retrieve correct value from key."); 
+      free(r);  
+   }
+
+}
+
 // Running everything.
 // ======================================================================
 
@@ -217,6 +246,7 @@ MU_TEST_SUITE (test_suite)
    MU_RUN_TEST(test_identityhash);
    MU_RUN_TEST(test_outofbounds);
    MU_RUN_TEST(test_rebuild);
+   MU_RUN_TEST(stress_test);
 }
 
 int main (int argc, char **argv)

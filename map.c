@@ -21,8 +21,6 @@ struct bucket {
    List *vals;
 };
 
-static const char emptyblock[sizeof (struct bucket)];
-
 struct map {
    int capacity;
    int items; // number of things in the map.
@@ -36,20 +34,39 @@ struct map {
    struct bucket *table; // array of list ptrs.
 };
 
+// Block of all zeroes.
+// Used to see if a bucket has been initialised at an index.
+static const char emptyblock[sizeof (struct bucket)];
 
 
 // Internal function declarations.
 // ======================================================================
 
+static unsigned int djb2 (struct map *map, void *key);
 static unsigned int hash (struct map *map, void *key);
 static int should_resize (struct map *map);
 static void rebuild (struct map *map);
-static inline void init_bucket (struct map *map, int index);
+static inline void init_bucket (struct map *map, unsigned int index);
 static inline struct bucket free_bucket (struct bucket bucket);
+static inline int bucket_exists (struct map *map, unsigned int index);
 
 
 // Internal functions.
 // ======================================================================
+
+static unsigned int djb2 (struct map *map, void *key)
+{
+   unsigned int hash = 5381;
+   char *ptr = (char *)key;
+   int i;
+   
+   for (i=0; i < map->szkey; i++) {
+      char c = *(ptr + i);
+      hash = ((hash << 5) + hash) + c;
+   }
+   
+   return hash;
+}
 
    /**
       Run an item through the hash function of a map. This is NOT guaranteed
@@ -61,8 +78,8 @@ static inline struct bucket free_bucket (struct bucket bucket);
 static unsigned int hash (struct map *map, void *key)
 {
    unsigned int r;
-   if (map->hash) r = map->hash(key);
-   else r = 0; // default hash
+   if (map->hash) return map->hash(key);
+   else return djb2(map, key);
 }
 
    /**
@@ -82,7 +99,7 @@ static int should_resize (struct map *map)
          map : map to initialise bucket for.
          index : index where the bucket should be created.
     **/
-static inline void init_bucket (struct map *map, int index)
+static inline void init_bucket (struct map *map, unsigned int index)
 {
    map->table[index].keys = List_Make(10, map->szkey, map->keycmp, map->keyfree);
    map->table[index].vals = List_Make(10, map->szval, map->valcmp, map->valfree);
@@ -103,7 +120,7 @@ static inline struct bucket free_bucket (struct bucket bucket)
          map : map to check.
          index : index of bucket to check.
     **/
-static inline int bucket_exists (struct map *map, int index)
+static inline int bucket_exists (struct map *map, unsigned int index)
 {
    return memcmp(emptyblock, map->table + index, sizeof (struct bucket));
 }
@@ -126,7 +143,7 @@ static void rebuild (struct map *map)
       if (!bucket_exists(map, i)) continue;
       struct bucket bucket = map->table[i];
       void *key = List_Get(bucket.keys, 0);
-      int k = hash(map, key) % new_capacity;
+      unsigned int k = hash(map, key) % new_capacity;
       memcpy(new_table + k, old_table + i, sizeof (struct bucket));
    }
 
@@ -210,7 +227,7 @@ int Map_Size (Map *map){
 int Map_Contains (Map *map,
                   void *key)
 {
-   int hash_index = hash(map, key) % map->capacity;
+   unsigned int hash_index = hash(map, key) % map->capacity;
    struct bucket buck = map->table[hash_index];
    return List_Contains(buck.keys, key);
 }
@@ -225,7 +242,7 @@ void *Map_Get (Map *map,
 {
 
    // Find appropriate bucket.
-   int hash_index = hash(map, key) % map->capacity;
+   unsigned int hash_index = hash(map, key) % map->capacity;
    if (!bucket_exists(map, hash_index))
       return NULL;
 
@@ -251,7 +268,7 @@ void Map_Put (Map *map, void *key, void *val)
       rebuild(map);
       
    // Find bucket where (key, val) should go.
-   int hash_index = hash(map, key) % map->capacity;
+   unsigned int hash_index = hash(map, key) % map->capacity;
    if (!bucket_exists(map, hash_index))
       init_bucket(map, hash_index);
    struct bucket *buck = map->table + hash_index;  
@@ -285,7 +302,7 @@ int Map_Del (Map *map,
 {
 
    // Find bucket where (key, val) should go.
-   int hash_index = hash(map, key) & map->capacity;
+   unsigned int hash_index = hash(map, key) & map->capacity;
    if (!bucket_exists(map, hash_index))
       return 0;
    struct bucket *buck = map->table + hash_index;  
