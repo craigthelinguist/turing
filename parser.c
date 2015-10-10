@@ -51,6 +51,20 @@ NUMBER      ::= [0-9]+
 #include "program.h"
 
 
+// Some handy macros.
+// ======================================================================
+
+#define SKIP skip_whitespace(data)
+
+#define ERR(...) do {\
+   fprintf(stderr, __VA_ARGS__);\
+   abort();\
+} while(0)
+
+#define TERMINATOR err(data, "Missing '.' terminator")
+#define COLON err(data, "Missing ':'")
+#define ARROW err(data, "Missing '->'")
+#define COMMA err(data, "Missing ','")
 
 // Definitions.
 // ======================================================================
@@ -105,6 +119,7 @@ struct parse_data {
    int index;
    int len;
    int line_num;
+   struct program *prog;
 };
 
 typedef struct parse_data DATA;
@@ -118,18 +133,25 @@ typedef struct parse_data DATA;
 static inline int done (DATA data);
 static inline void skip_whitespace (DATA data);
 static inline void err (DATA data, char *msg);
-static inline Str *parse_string (DATA data);
 static inline int gobble_char (DATA data, char c);
 static inline int gobble_str (DATA data, char *s);
-static inline void validate_program (struct program *program);
+static inline int gobble_str_insensitive(DATA data, char *s);
+static inline int is_number (Str *s);
+
+static inline Str *Parse_String (DATA);
+static inline Str *Peek_String (DATA);
+static inline int Parse_Number (DATA);
 
 // Parsing grammar rules.
-static inline Str *Parse_String(DATA);
-static inline Str *Parse_Name(DATA);
-static inline int Parse_Inputs(DATA);
-static inline Str *Parse_InitState(DATA);
-static inline struct state Parse_State(DATA);
-static inline int Count_States(DATA);
+static inline void Parse_Header (DATA);
+static inline void Parse_Name (DATA);
+static inline void Parse_Inputs (DATA);
+static inline void Parse_InitState (DATA);
+static inline void Parse_States (DATA);
+
+// Static analysis.
+static inline int Count_States (DATA);
+static inline void validate_program (struct program *program);
 
 
 
@@ -155,8 +177,7 @@ static inline void skip_whitespace (DATA data)
 
 static inline void err (DATA data, char *msg)
 {
-   fprintf(stderr, "Line %d: %s\n", data.line_num, msg);
-   abort();
+
 }
 
 static inline Str *Parse_String (DATA data)
@@ -167,6 +188,21 @@ static inline Str *Parse_String (DATA data)
    memcpy(contents, data.text + data.index, i);
    data.index += i;
    return Str_Make(contents);
+}
+
+static inline Str *Peek_String (DATA data)
+{
+   Str *s = Parse_String(data);
+   data.index -= Str_Len(s);
+   return s;
+}
+
+static inline int Parse_Number (DATA data)
+{
+   Str *s = Parse_String(data);
+   if (!is_number(s))
+      ERR("Num of inputs to program should be numeric value.");
+   return Str_ToInt(s);
 }
 
 static inline int gobble_char (DATA data, char c)
@@ -187,7 +223,7 @@ static inline int gobble_str (DATA data, char *s)
    return 1;
 }
 
-static inline int gobble_str_sensitive (DATA data, char *s)
+static inline int gobble_str_insensitive (DATA data, char *s)
 {
    int i;
    for (i=0; s[i] != '\0' && isalnum(data.text[data.index+i]); i++) {
@@ -196,6 +232,135 @@ static inline int gobble_str_sensitive (DATA data, char *s)
    if (isalnum(data.text[data.index+i])) return 0;
    data.index += i;
    return 1;
+}
+
+static inline int is_number (Str *string)
+{
+   int i = 0;
+   char *chars = Str_Guts(string);
+   for (; i < Str_Len(string); i++) {
+      if (!isdigit(chars[i])) return 0;
+   }
+   return 1;
+}
+
+
+// Parsing program header.
+// ======================================================================
+
+   /**
+      HEADER ::= NAME INPUTS INITIAL [IMPORTS]?
+   **/
+static inline void Parse_Header (DATA data)
+{
+
+   // TODO: imports.
+
+   // The things in the header to parse.
+   // Note you can specify the header info in any order.
+   int name, inputs, init;
+   name = inputs = init = 0;
+   int maxiters = 3; // number of things in header to parse.
+   int i = 0;   
+
+   // Loop around checking for the stuff in the header.
+   // Throw an error if something is defined more than once.
+   // MaxIters is an upper bound; avoids parser running to end of file.
+   while (!(name && inputs && init) || i++ >= maxiters) {
+
+      // Lookahed.
+      Str *s = Peek_String(data);
+
+      // Case: parsing name of program.
+      if (Str_EqIgnoreCase(s, "name")) {
+         if (name) ERR("Name defined twice.");
+         Parse_Name(data);
+         name = 1;
+      }
+
+      // Case: parsing number of inputs to program.
+      else if (Str_EqIgnoreCase(s, "inputs")) {
+         if (inputs) ERR("Number of inputs defined twice.");
+         Parse_Inputs(data);
+         if (data.prog->num_inputs < 0)
+            ERR("Specified number of inputs as %d: must be a non-negative amount.", data.prog->num_inputs);
+         inputs = 1;      
+      }
+
+      // Case: parsing name of initial state..
+      else if (Str_EqIgnoreCase(s, "init")) {
+         if (init) ERR("Initial state defined twice.");
+         Parse_InitState(data);
+         init = 1;      
+      }
+
+      // case: Unknown, throw your hands in the air.
+      else {
+         ERR("Unknown keyword in header file: %s.", Str_Guts(s));
+      }
+   }
+
+   // Throw an error if you're missing header info
+   if (!name) ERR("Missing name declaration in header.");
+   if (!inputs) ERR("Missing number of inputs in header.");
+   if (!init) ERR("Missing initial state declaration in header.");
+
+}
+
+   /**
+      NAME ::= Name: IDEN.
+   **/
+static inline void Parse_Name (DATA data)
+{
+   if (!gobble_str_insensitive(data, "Name"))
+      ERR("Expected name declaration.");
+   SKIP; COLON; SKIP;
+   data.prog->name = Parse_String(data);
+   TERMINATOR; SKIP;
+}
+
+   /**
+      INPUTS ::= Inputs: NUMBER.
+   **/
+static inline void Parse_Inputs (DATA data)
+{
+   if (!gobble_str_insensitive(data, "Inputs"))
+      ERR("Expected inputs declaration.");
+   SKIP; COLON; SKIP;
+   data.prog->num_inputs = Parse_Number(data);
+   TERMINATOR; SKIP;
+}
+
+   /**
+      INITIAL ::= Init: IDEN.
+   **/
+static inline void Parse_InitState (DATA data)
+{
+   if (!gobble_str_insensitive(data, "Init"))
+      ERR("Expected declaration of initial state.");
+   SKIP; COLON; SKIP;
+   data.prog->init_state = Parse_String(data);
+   TERMINATOR; SKIP;
+}
+
+
+
+// Parsing state declarations.
+// ======================================================================
+
+static inline void Parse_States (DATA data)
+{
+   struct state state;
+}
+
+
+
+// Static analysis functions.
+// ======================================================================
+
+static inline int Count_States(DATA data)
+{
+   return -1;
 }
 
 static inline void validate_program (struct program *program)
@@ -207,46 +372,8 @@ static inline void validate_program (struct program *program)
 }
 
 
-// Parsing grammar rules.
-// ======================================================================
 
-static inline Str *Parse_Name(DATA data)
-{
-   if (!gobble_str_insensitive(data, "Name"))
-      err(data, "Expected name declaration.");
-   skip_whitespace(data);
-   if (!gobble_char(data, ':'))
-      err(data, "Missing ':' in name declaration.");
-   skip_whitespace(data);
-   Str *name = Parse_String(data);
-   if (!gobble_char(data, '.'))
-      err(data, "Missing '.' terminator in name declaration (Name:%s)");//, name);
-   skip_whitespace(data);
-   return name;
-}
-
-static inline int Parse_Inputs(DATA data)
-{
-   return -1;
-}
-
-static inline Str *Parse_InitState(DATA data)
-{
-   return NULL;
-}
-
-static inline struct state Parse_State(DATA data)
-{
-   struct state state;
-   return state;
-}
-
-static inline int Count_States(DATA data)
-{
-   return -1;
-}
-
-// Public functions.
+// Used for map lookups.
 // ======================================================================
 
 void Map_FreeStr (void *s)
@@ -264,6 +391,11 @@ int Map_CmpStr (void *v1, void *v2)
    return Str_Cmp(s1, s2);
 }
 
+
+
+// Public functions.
+// ======================================================================
+
 struct program *Parse_Program (Str *string)
 {
 
@@ -273,37 +405,17 @@ struct program *Parse_Program (Str *string)
    data.len = Str_Len(string);
    data.text = Str_Guts(string);
    data.line_num = 1;
+   data.prog = malloc(sizeof (struct program));
 
    // Parse meta info.
-   Str *routine_name = Parse_Name(data);
-   int num_inputs = Parse_Inputs(data);
-   if (num_inputs < 0)
-      err(data, "Must have non-negative number of inputs.");
-   Str *init_state = Parse_InitState(data);
+   Parse_Header(data);
 
-   // Create and initialise the program.
-   struct program *program = malloc(sizeof program);
-   program->num_inputs = num_inputs;
-   program->init_state = init_state;
-   program->name = routine_name;
-   int num_states = Count_States(data);
-   if (num_states == 0)
-      err(data, "Need at least one state.");
-   program->states = Map_Make(num_states, sizeof(Str *), sizeof(struct state), NULL,
-                              Map_FreeStr, Map_CmpStr, NULL, NULL);
-
-   // Parse definitions.
-   int i;
-   for (i=0; i < num_states; i++) {
-      struct state state = Parse_State(data);
-      if (Map_Contains(program->states, state.name))
-         err(data, "state being defined again.");
-      Map_Put(program->states, state.name, &state);
-   }
+   // Parse states.
+   Parse_States(data);
 
    // Check the program is a good one.
-   validate_program(program);
-   return program;
+   validate_program(data.prog);
+   return data.prog;
 
 }
 

@@ -15,6 +15,10 @@
    #include <string.h>
 #endif
 
+#ifndef CTYPE_H
+   #include <ctype.h>
+#endif
+
 #include "str.h"
 
 
@@ -87,10 +91,64 @@ int Str_Cmp (Str *str1, Str *str2)
    return difference;
 }
 
-char *guts (Str *str)
+char *Str_Guts (Str *str)
 {
-   return str.chars;
+   return str->chars;
 }
 
+int Str_ToInt (Str *str)
+{
+
+   // Preliminary checks.
+   if (str == NULL) goto null;
+   if (str->len == 0) goto err;
+   char *txt = str->chars;   
+
+   // Check for the sign.
+   int sign = 1;
+   if (txt[0] == '-') sign = -1;
+
+   // Go through each digit.
+   char digit;
+   int num = 0;
+   int i;
+   for (i=0; i < str->len; i++) {
+      digit = txt[i];
+      if (digit < '0' || digit > '9') goto err;
+      num *= 10;
+      num += digit - '0';
+   }
+   return num;
+
+   // Error handling.
+   err:
+      fprintf(stderr, "Illegal conversion of string %s to integer.", str->chars);
+      abort();
+   null:
+      fprintf(stderr, "Trying to convert null Str to itneger.");
+      abort();
+
+}
+
+
+int Str_Eq (Str *str, char *txt)
+{
+   int i = 0;
+   while (txt[i] != '\0' && i < str->len) {
+      if (txt[i] != str->chars[i]) return 0;
+      i++;
+   }
+   return i == str->len && txt[i] == '\0';
+}
+
+int Str_EqIgnoreCase (Str *str, char *txt)
+{
+   int i = 0;
+   while (txt[i] != '\0' && i < str->len) {
+      if (tolower(txt[i]) != tolower(str->chars[i])) return 0;
+      i++;
+   }
+   return i == str->len && txt[i] == '\0';
+}
 
 
