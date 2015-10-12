@@ -64,10 +64,26 @@ NUMBER      ::= [0-9]+
    abort();\
 } while(0)
 
-#define TERMINATOR ERR("Missing '.' terminator")
-#define COLON ERR("Missing ':'")
-#define ARROW ERR("Missing '->'")
-#define COMMA ERR("Missing ','")
+#define TERMINATOR do {\
+   if (!gobble_char(data, '.'))\
+      ERR("Missing '.' terminator");\
+} while(0)
+
+#define COLON do {\
+   if (!gobble_char(data, ':'))\
+      ERR("Missing ':'");\
+} while(0)
+
+#define ARROW do {\
+   if (!gobble_str(data, "->"))\
+      ERR("Missing '->'");\
+} while(0)
+
+#define COMMA do {\
+   if (!gobble_char(data, ','))\
+      ERR("Missing ','");\
+} while(0)
+
 
 // Definitions.
 // ======================================================================
@@ -133,16 +149,17 @@ typedef struct parse_data DATA;
 // ======================================================================
 
 // Parsing helpers.
+static inline int is_delim (char c);
+static inline int is_number (Str *string);
 static inline int done (DATA *data);
 static inline void skip_whitespace (DATA *data);
 static inline int gobble_char (DATA *data, char c);
 static inline int gobble_str (DATA *data, char *s);
 static inline int gobble_str_insensitive(DATA *data, char *s);
-static inline int is_number (Str *s);
 
-static inline Str *Parse_String (DATA *);
-static inline Str *Peek_String (DATA *);
-static inline int Parse_Number (DATA *);
+static inline Str *parse_string (DATA *);
+static inline Str *peek_string (DATA *);
+static inline int parse_number (DATA *);
 
 // Parsing grammar rules.
 static inline void Parse_Header (DATA *);
@@ -152,16 +169,21 @@ static inline void Parse_InitState (DATA *);
 static inline void Parse_States (DATA *);
 
 // Static analysis.
-static inline int Count_States (DATA *);
+static inline int count_states (DATA *);
 static inline void validate_program (struct program *program);
 
 
 // Parsing helpers.
 // ======================================================================
 
+static inline int is_delim (char c)
+{
+   return isspace(c) || c == ':' || c == '.';
+}
+
 static inline int done(DATA * data)
 {
-   skip_whitespace(data);
+   SKIP;
    return data->index >= data->len;
 }
 
@@ -175,11 +197,11 @@ static inline void skip_whitespace (DATA * data)
    }
 }
 
-static inline Str *Parse_String (DATA * data)
+static inline Str *parse_string (DATA * data)
 {
    SKIP;
    int i = 0;
-   while (isalpha(data->text[data->index+i])) i++;
+   while (!is_delim(data->text[data->index+i])) i++;
    char contents[i + 1];
    memcpy(contents, data->text + data->index, i);
    contents[i] = '\0';
@@ -187,11 +209,11 @@ static inline Str *Parse_String (DATA * data)
    return Str_Make(contents);
 }
 
-static inline Str *Peek_String (DATA * data)
+static inline Str *peek_string (DATA * data)
 {
    SKIP;
    int i = 0;
-   while (isalpha(data->text[data->index+i])) i++;
+   while (!is_delim(data->text[data->index+i])) i++;
    char contents[i + 1];
    memcpy(contents, data->text + data->index, i);
    contents[i] = '\0';
@@ -199,9 +221,10 @@ static inline Str *Peek_String (DATA * data)
    return Str_Make(contents);
 }
 
-static inline int Parse_Number (DATA * data)
+static inline int parse_number (DATA * data)
 {
-   Str *s = Parse_String(data);
+   SKIP;
+   Str *s = parse_string(data);
    if (!is_number(s))
       ERR("Num of inputs to program should be numeric value.");
    return Str_ToInt(s);
@@ -209,13 +232,16 @@ static inline int Parse_Number (DATA * data)
 
 static inline int gobble_char (DATA * data, char c)
 {
-   if (data->text[data->index] != c) return 0;;
+   SKIP;
+   if (data->text[data->index] != c)
+      return 0;
    data->index++;
    return 1;
 }
 
 static inline int gobble_str (DATA * data, char *s)
 {
+   SKIP;
    int i;
    for (i=0; s[i] != '\0' && isalnum(data->text[data->index+i]); i++) {
       if (s[i] != data->text[data->index+i]) return 0;
@@ -227,6 +253,7 @@ static inline int gobble_str (DATA * data, char *s)
 
 static inline int gobble_str_insensitive (DATA * data, char *s)
 {
+   SKIP;
    int i;
    for (i=0; s[i] != '\0' && isalnum(data->text[data->index+i]); i++) {
       if (tolower(s[i]) != tolower(data->text[data->index+i])) return 0;
@@ -271,12 +298,7 @@ static inline void Parse_Header (DATA * data)
    while (!(name && inputs && init) || i++ >= maxiters) {
 
       // Lookahead.
-      Str *s = Peek_String(data);
-      printf("string is %s\n", s);
-      int i;
-      for (i=0; i < Str_Len(s); i++) {
-         printf("char %d is %d\n", Str_CharAt(s, i), i);
-      }
+      Str *s = peek_string(data);
 
       // Case: parsing name of program.
       if (Str_EqIgnoreCase(s, "name")) {
@@ -321,9 +343,9 @@ static inline void Parse_Name (DATA * data)
 {
    if (!gobble_str_insensitive(data, "Name"))
       ERR("Expected name declaration.");
-   SKIP; COLON; SKIP;
-   data->prog->name = Parse_String(data);
-   TERMINATOR; SKIP;
+   COLON;
+   data->prog->name = parse_string(data);
+   TERMINATOR;
 }
 
    /**
@@ -334,7 +356,7 @@ static inline void Parse_Inputs (DATA * data)
    if (!gobble_str_insensitive(data, "Inputs"))
       ERR("Expected inputs declaration.");
    SKIP; COLON; SKIP;
-   data->prog->num_inputs = Parse_Number(data);
+   data->prog->num_inputs = parse_number(data);
    TERMINATOR; SKIP;
 }
 
@@ -346,7 +368,7 @@ static inline void Parse_InitState (DATA * data)
    if (!gobble_str_insensitive(data, "Init"))
       ERR("Expected declaration of initial state.");
    SKIP; COLON; SKIP;
-   data->prog->init_state = Parse_String(data);
+   data->prog->init_state = parse_string(data);
    TERMINATOR; SKIP;
 }
 
@@ -365,7 +387,7 @@ static inline void Parse_States (DATA * data)
 // Static analysis functions.
 // ======================================================================
 
-static inline int Count_States(DATA * data)
+static inline int count_states(DATA * data)
 {
    return -1;
 }
@@ -461,15 +483,23 @@ int main (int argc, char **argv)
    
    // Read file contents into buffer. Make string.
    fread (buffer, sizeof(char), length, f);
-   
    buffer[length] = '\0';
-   
    Str *prog_text = Str_Make(buffer);
-   buffer[length] = '\0';
+   
+   // Do parsing.
    struct program *prog = Parse_Program(prog_text);
-   printf("%s parsed.\n", argv[1]);
+   
+   // Display parsing details.
+   printf("%s parsed.\n\n", argv[1]);
+   printf("DETAILS\n");
+   printf("==============\n");
+   printf("Program name: %s\n", Str_Guts(prog->name));
+   printf("Num inputs: %d\n", prog->num_inputs);
+   printf("Initial state: %s\n\n", Str_Guts(prog->init_state));
+   
+   // Tear down everything.
    Str_Free(prog_text);
-   // .. should also free program here.
+   // .. should also free the struct program here.
    return 0;
    
    IOerr:

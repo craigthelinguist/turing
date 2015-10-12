@@ -63,7 +63,7 @@ int Str_Len (Str *str)
 Str *Str_Make (char *contents)
 {
    int count = 0;
-   while (contents+count != NULL)
+   while (*(contents+count) != '\0')
       count++;
    struct str *str = malloc(sizeof (struct str));
    str->len = count;
@@ -150,5 +150,4 @@ int Str_EqIgnoreCase (Str *str, char *txt)
    }
    return i == str->len && txt[i] == '\0';
 }
-
 
