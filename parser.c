@@ -84,6 +84,8 @@ NUMBER      ::= [0-9]+
       ERR("Missing ','");\
 } while(0)
 
+#define DONE done(data)
+
 
 // Definitions.
 // ======================================================================
@@ -167,11 +169,15 @@ static inline void Parse_Name (DATA *);
 static inline void Parse_Inputs (DATA *);
 static inline void Parse_InitState (DATA *);
 static inline void Parse_States (DATA *);
+static inline void Parse_State (DATA *, Map *);
 
 // Static analysis.
 static inline int count_states (DATA *);
 static inline void validate_program (struct program *program);
 
+// For the map.
+void Map_FreeStr (void *s);
+int Map_CmpStr (void *v1, void *v2);
 
 // Parsing helpers.
 // ======================================================================
@@ -273,7 +279,6 @@ static inline int is_number (Str *string)
    return 1;
 }
 
-
 // Parsing program header.
 // ======================================================================
 
@@ -355,9 +360,9 @@ static inline void Parse_Inputs (DATA * data)
 {
    if (!gobble_str_insensitive(data, "Inputs"))
       ERR("Expected inputs declaration.");
-   SKIP; COLON; SKIP;
+   COLON;
    data->prog->num_inputs = parse_number(data);
-   TERMINATOR; SKIP;
+   TERMINATOR;
 }
 
    /**
@@ -367,9 +372,9 @@ static inline void Parse_InitState (DATA * data)
 {
    if (!gobble_str_insensitive(data, "Init"))
       ERR("Expected declaration of initial state.");
-   SKIP; COLON; SKIP;
+   COLON;
    data->prog->init_state = parse_string(data);
-   TERMINATOR; SKIP;
+   TERMINATOR;
 }
 
 
@@ -379,18 +384,40 @@ static inline void Parse_InitState (DATA * data)
 
 static inline void Parse_States (DATA * data)
 {
-   struct state state;
+
+   // Figure out how many states in this program.
+   int num_states = count_states(data);
+   if (num_states == 0)
+      ERR("No states found!");
+   
+   // Mapping of Str -> State
+   Map *map = Map_Make(num_states,                  // size of map
+                       Str_SizeOf(), sizeof(struct state),
+                       NULL,                        // the hash function
+                       Map_FreeStr, Map_CmpStr,     // key functions
+                       NULL, NULL);
+                    
+   // Parse the states.
+   while (!DONE) Parse_State (data, map);
+   data->prog->states = map;
+   
 }
 
+static inline void Parse_State (DATA *data, Map *map)
+{
+   // TO IMPLEMENT
+}
+
+static inline int count_states(DATA * data)
+{
+   // TO IMPLEMENT
+   return -1;
+}
 
 
 // Static analysis functions.
 // ======================================================================
 
-static inline int count_states(DATA * data)
-{
-   return -1;
-}
 
 static inline void validate_program (struct program *program)
 {
@@ -443,7 +470,7 @@ struct program *Parse_Program (Str *string)
    //Parse_States(data);
 
    // Check the program is a good one.
-   //validate_program(data->rog);
+   //validate_program(data->prog);
    
    // Free stuff.
    free(data);

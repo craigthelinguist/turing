@@ -151,3 +151,7 @@ int Str_EqIgnoreCase (Str *str, char *txt)
    return i == str->len && txt[i] == '\0';
 }
 
+int Str_SizeOf ()
+{
+   return sizeof(struct str);
+}
