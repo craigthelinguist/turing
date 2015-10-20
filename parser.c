@@ -87,53 +87,10 @@ NUMBER      ::= [0-9]+
 #define DONE done(data)
 
 
+#include "program.h"
+
 // Definitions.
 // ======================================================================
-
-typedef enum stmt_type { PRINT, MOVEMENT, INVOCATION } StmtType;
-
-   /**
-      Each file describes one program.
-    **/
-struct program {
-   Map *states; // Str -> State
-   Str *name;
-   Str *init_state;
-   int num_inputs;
-};
-
-   /**
-      An individual state within a program.
-   **/
-struct state {
-   Str *name;
-   int num_cases;
-   char *inputs;
-   struct stmt *actions;
-   Str *transitions;
-};
-
-   /**
-      A particular kind of instructions that involves calling another
-      program.
-   **/
-struct invocation {
-   Str *name;
-   int num_args;
-   char *args;
-   Str *transition;
-};
-
-   /**
-      Some instruction the state carries out.
-   **/
-struct stmt {
-   StmtType type;
-   union {
-      struct invocation invocation;
-      Str *primitive;
-   };
-};
 
 struct parse_data {
    char *text;
@@ -159,6 +116,7 @@ static inline int gobble_char (DATA *data, char c);
 static inline int gobble_str (DATA *data, char *s);
 static inline int gobble_str_insensitive(DATA *data, char *s);
 
+static inline Str *parse_line (DATA *);
 static inline Str *parse_string (DATA *);
 static inline Str *peek_string (DATA *);
 static inline int parse_number (DATA *);
@@ -173,6 +131,7 @@ static inline void Parse_State (DATA *, Map *);
 
 // Static analysis.
 static inline int count_states (DATA *);
+static inline int count_clauses (DATA *);
 static inline void validate_program (struct program *program);
 
 // For the map.
@@ -201,6 +160,18 @@ static inline void skip_whitespace (DATA * data)
          data->line_num++;
       data->index++;      
    }
+}
+
+static inline Str *parse_line (DATA *data)
+{
+   SKIP;
+   int i = 0;
+   while (!isspace(data->text[data->index+i])) i++;
+   char contents[i + 1];
+   memcpy(contents, data->text + data->index, i);
+   contents[i] = '\0';
+   data->index += i;
+   return Str_Make(contents);
 }
 
 static inline Str *parse_string (DATA * data)
@@ -233,7 +204,9 @@ static inline int parse_number (DATA * data)
    Str *s = parse_string(data);
    if (!is_number(s))
       ERR("Num of inputs to program should be numeric value.");
-   return Str_ToInt(s);
+   int i = Str_ToInt(s);
+   free(s);
+   return i;
 }
 
 static inline int gobble_char (DATA * data, char c)
@@ -349,7 +322,10 @@ static inline void Parse_Name (DATA * data)
    if (!gobble_str_insensitive(data, "Name"))
       ERR("Expected name declaration.");
    COLON;
-   data->prog->name = parse_string(data);
+   data->prog->name = malloc(Str_SizeOf());
+   Str *s = parse_string(data);
+   memcpy(data->prog->name, s, Str_SizeOf());
+   free(s);
    TERMINATOR;
 }
 
@@ -373,7 +349,10 @@ static inline void Parse_InitState (DATA * data)
    if (!gobble_str_insensitive(data, "Init"))
       ERR("Expected declaration of initial state.");
    COLON;
-   data->prog->init_state = parse_string(data);
+   Str *init_state = parse_string(data);
+   data->prog->init_state = malloc(Str_SizeOf());
+   memcpy(data->prog->init_state, init_state, Str_SizeOf());
+   free(init_state);
    TERMINATOR;
 }
 
@@ -389,23 +368,115 @@ static inline void Parse_States (DATA * data)
    int num_states = count_states(data);
    if (num_states == 0)
       ERR("No states found!");
-   
+
    // Mapping of Str -> State
    Map *map = Map_Make(num_states,                  // size of map
-                       Str_SizeOf(), sizeof(struct state),
+                       Str_SizeOf(), sizeof(struct clause *),
                        NULL,                        // the hash function
                        Map_FreeStr, Map_CmpStr,     // key functions
                        NULL, NULL);
-                    
+
    // Parse the states.
    while (!DONE) Parse_State (data, map);
    data->prog->states = map;
    
 }
 
+static inline struct clause *Parse_Clause (DATA *data)
+{
+   
+   // Parse the clause.
+   Str *input_s = parse_string(data);
+   ARROW;
+   Str *action = parse_string(data);
+   COMMA;
+   Str *transition = parse_string(data);
+   TERMINATOR;
+
+   // Convert input to appropriate char.
+   char input;
+   if (Str_Eq(input_s, "blank"))
+      input = BLANK;
+   else if (Str_Len(input_s) != 1)
+      ERR("Input for clause must be a single character or blank.");
+   input = Str_CharAt(input_s, 0);
+
+   // Convert action to appropriate thing.
+   Action act;
+   if (Str_Eq(action, "right"))
+      act = RIGHT;
+   else if (Str_Eq(action, "left"))
+      act = LEFT;
+   else if (Str_Eq(input_s, "blank"))
+      act = PRINT;
+   else if (Str_Len(input_s) == 1)
+      act = PRINT;
+   else
+      ERR("Unknown action for clause.");
+
+   // Construct and return clause.
+   struct clause *cl = malloc(sizeof (struct clause));
+   cl->input = input;
+   cl->action = act;
+   cl->end_state = Str_Make(Str_Guts(transition));
+   free(input_s);
+   free(action);
+   free(transition);
+   return cl;
+
+}
+
 static inline void Parse_State (DATA *data, Map *map)
 {
-   // TO IMPLEMENT
+
+   // Parse name of state.
+   Str *str = parse_string(data);
+   if (Map_Contains (map, str))
+      ERR("Duplicate state found.");
+   COLON;
+
+   // Count number of clauses.
+   int num_clauses = count_clauses(data);
+   if (num_clauses < 1)
+      ERR("Need at least one clause.");
+   struct clause **clauses = calloc(num_clauses, sizeof (struct clause));
+   
+   // Parse the clauses.
+   int i;
+   for (i=0; i < num_clauses; i++){
+      clauses[i] = Parse_Clause (data);
+   }
+
+   // Put into map.
+   Map_Put (map, str, clauses);
+   free(str);
+
+}
+
+static inline int count_clauses (DATA *data)
+{
+   int ogIndex = data->index;
+   int count = 0;
+
+   Str *s;
+
+   while (!done(data)) {
+      s = parse_string(data);
+      s = parse_string(data);
+      if (Str_Eq(s, ":"))
+         break;
+      if (!Str_Eq(s, "->"))
+         ERR("Unknown string while parsing clauses.");
+      s = parse_string(data);
+      COMMA;
+      s = parse_string(data);
+      TERMINATOR;
+   }
+
+   free(s);
+   data->index = ogIndex;
+   return count;
+
 }
 
 static inline int count_states(DATA * data)
