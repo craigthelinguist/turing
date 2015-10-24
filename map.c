@@ -282,8 +282,14 @@ int Map_Size (Map *map){
 int Map_Contains (Map *map,
                   void *key)
 {
+   // Get the appropriate bucket.
    unsigned int hash_index = hash(map, key) % map->capacity;
    struct bucket buck = map->table[hash_index];
+
+   // If nothing in the bucket, map does not contain key.
+   if (buck.keys == NULL) return 0;
+
+   // Otherwise look through the bucket's keys.
    return List_Contains(buck.keys, key);
 }
 

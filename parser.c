@@ -75,7 +75,7 @@ NUMBER      ::= [0-9]+
 } while(0)
 
 #define ARROW do {\
-   if (!gobble_str(data, "->"))\
+   if (!gobble_token(data, "->"))\
       ERR("Missing '->'");\
 } while(0)
 
@@ -143,7 +143,7 @@ int Map_CmpStr (void *v1, void *v2);
 
 static inline int is_delim (char c)
 {
-   return isspace(c) || c == ':' || c == '.';
+   return isspace(c) || c == ':' || c == '.' || c == ',';
 }
 
 static inline int done(DATA * data)
@@ -226,6 +226,17 @@ static inline int gobble_str (DATA * data, char *s)
       if (s[i] != data->text[data->index+i]) return 0;
    }
    if (isalnum(data->text[data->index+i])) return 0;
+   data->index += i;
+   return 1;
+}
+
+static inline int gobble_token (DATA *data, char *s)
+{
+   SKIP;
+   int i;
+   for (i=0; s[i] != '\0' && !isspace(data->text[data->index+i]); i++) {
+      if (s[i] != data->text[data->index+i]) return 0;
+   }
    data->index += i;
    return 1;
 }
@@ -431,6 +442,7 @@ static inline void Parse_State (DATA *data, Map *map)
 
    // Parse name of state.
    Str *str = parse_string(data);
+
    if (Map_Contains (map, str))
       ERR("Duplicate state found.");
    COLON;
@@ -456,33 +468,79 @@ static inline void Parse_State (DATA *data, Map *map)
 static inline int count_clauses (DATA *data)
 {
    int ogIndex = data->index;
-   int count = 0;
+   int num_clauses = 0;
 
-   Str *s;
+   Str *s = NULL;
 
    while (!done(data)) {
       s = parse_string(data);
-      s = parse_string(data);
-      if (Str_Eq(s, ":"))
+      if (!gobble_token(data, "->"))
          break;
-      if (!Str_Eq(s, "->"))
-         ERR("Unknown string while parsing clauses.");
       s = parse_string(data);
       COMMA;
       s = parse_string(data);
       TERMINATOR;
+      num_clauses++;
    }
 
-   free(s);
+   if (s != NULL) Str_Free(s);
    data->index = ogIndex;
-   return count;
+   return num_clauses;
 
 }
 
-static inline int count_states(DATA * data)
+static inline int count_states (DATA * data)
 {
-   // TO IMPLEMENT
-   return -1;
+
+   int ogIndex = data->index;
+   int num_states = 0;
+
+   Str *s;
+
+   while (!done(data)) {
+
+      // Parse state identifier and colon.
+      s = parse_string(data); // identifier
+      if (!gobble_char(data, ':'))
+         ERR("Expected state, got something unknown.");
+      num_states++;
+
+      // Looking through a state. Skip over the clauses.
+      int num_clauses = 0;
+      while (1) {
+
+         // Check if you're at the end.
+         if (done(data)) break;
+
+         // Check if you're parsing another clause, or are inside
+         // an entirely new state definition.
+         int indexb4 = data->index;
+         s = parse_string(data);
+         if (!gobble_token(data, "->")) {
+            data->index = indexb4;
+            break;
+         }
+           
+         // Parse the rest of the clause.
+         s = parse_string(data);
+         COMMA;
+         s = parse_string(data);
+         TERMINATOR;
+         num_clauses++;
+
+      }
+
+      // Done parsing state. Check number of clauses.
+      if (num_clauses == 0)
+         ERR("No clauses given for state definition."); 
+
+   }
+
+   // Clean up, reset parser, return count.
+   if (s != NULL) Str_Free(s);
+   data->index = ogIndex;
+   return num_states;
+
 }
 
 
@@ -538,7 +596,7 @@ struct program *Parse_Program (Str *string)
    Parse_Header(data);
 
    // Parse states.
-   //Parse_States(data);
+   Parse_States(data);
 
    // Check the program is a good one.
    //validate_program(data->prog);
@@ -588,13 +646,16 @@ int main (int argc, char **argv)
    struct program *prog = Parse_Program(prog_text);
    
    // Display parsing details.
+   printf("\n");
    printf("%s parsed.\n\n", argv[1]);
    printf("DETAILS\n");
    printf("==============\n");
    printf("Program name: %s\n", Str_Guts(prog->name));
-   printf("Num inputs: %d\n", prog->num_inputs);
-   printf("Initial state: %s\n\n", Str_Guts(prog->init_state));
-   
+   printf("Number of inputs: %d\n", prog->num_inputs);
+   printf("Initial state: %s\n", Str_Guts(prog->init_state));
+   printf("Number of states: %d\n", Map_Size(prog->states));
+   printf("\n");   
+
    // Tear down everything.
    Str_Free(prog_text);
    // .. should also free the struct program here.
