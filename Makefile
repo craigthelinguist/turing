@@ -1,8 +1,8 @@
 COMPILER=gcc
-FLAGS=-Wall -Wundef -Wcast-align -Wpointer-arith -Wstrict-overflow=5 -Winit-self -Waggregate-return -o
+FLAGS=-Wall -Wundef -Wcast-align -Wpointer-arith -Wstrict-overflow=5 -Winit-self -Waggregate-return
 
-tm: turing.c list.c map.c
-	$(COMPILER) $(FLAGS) -o tm turing.c map.c list.c -l ncurses
+tm: turing.c map.c list.c str.c
+	$(COMPILER) $(FLAGS) turing.c map.c list.c str.c -o tm
 
 tests: tests_list tests_map
 

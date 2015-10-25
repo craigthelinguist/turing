@@ -118,7 +118,7 @@ int Str_ToInt (Str *str)
       num *= 10;
       num += digit - '0';
    }
-   return num;
+   return sign * num;
 
    // Error handling.
    err:
