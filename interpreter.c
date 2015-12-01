@@ -1,23 +1,10 @@
 
-
 #ifndef STDLIB_H
    #include <stdlib.h>
 #endif
 
 #ifndef INTERPRETER_H
    #include "interpreter.h"
-#endif
-
-#ifndef PROGRAM_H
-   #include "program.h"
-#endif
-
-#ifndef MACHINE_H
-   #include "machine.h"
-#endif
-
-#ifndef STR_H
-   #include "str.h"
 #endif
 
 int
