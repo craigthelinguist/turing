@@ -61,8 +61,6 @@ NUMBER      ::= [0-9]+
 #endif
 
 #ifndef PROGRAM_H
-   #include "program.h"
-#endif
 
 
 // Some handy macros.
