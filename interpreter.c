@@ -7,6 +7,10 @@
    #include "interpreter.h"
 #endif
 
+#ifndef MAP_H
+   #include "map.h"
+#endif
+
 int
 Prog_Halted (struct machine *m, Program *prog, Str *state)
 {
@@ -24,7 +28,7 @@ Prog_Step (Machine *m, Program *prog, Str *state)
    if (Prog_Halted(m, prog, state)) return;
    
    // Look up clauses for current state.
-   struct clause **clauses = Map_Get (prog->states, state);
+   Clause **clauses = Map_Get (prog->states, state);
 
    // If no such state defined, halt.
    if (clauses == NULL) {

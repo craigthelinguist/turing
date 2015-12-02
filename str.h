@@ -20,3 +20,5 @@ int Str_ToInt (Str *str);
 int Str_Eq (Str *str, char *txt);
 
 int Str_EqIgnoreCase (Str *str, char *txt);
+
+int Str_SizeOf ();

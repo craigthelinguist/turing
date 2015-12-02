@@ -48,9 +48,21 @@ NUMBER      ::= [0-9]+
    #include <unistd.h>
 #endif
 
-#include "str.h"
-#include "map.h"
-#include "list.h"
+#ifndef STR_H
+   #include "str.h"
+#endif
+
+#ifndef MAP_H
+   #include "map.h"
+#endif
+
+#ifndef LIST_H
+   #include "list.h"
+#endif
+
+#ifndef PROGRAM_H
+   #include "program.h"
+#endif
 
 
 // Some handy macros.
@@ -87,8 +99,6 @@ NUMBER      ::= [0-9]+
 #define DONE done(data)
 
 
-#include "program.h"
-
 // Definitions.
 // ======================================================================
 
@@ -97,7 +107,7 @@ struct parse_data {
    int index;
    int len;
    int line_num;
-   struct program *prog;
+   Program *prog;
 };
 
 typedef struct parse_data DATA;
@@ -132,11 +142,12 @@ static inline void Parse_State (DATA *, Map *);
 // Static analysis.
 static inline int count_states (DATA *);
 static inline int count_clauses (DATA *);
-static inline void validate_program (struct program *program);
+static inline void validate_program (Program *program);
 
 // For the map.
 void Map_FreeStr (void *s);
 int Map_CmpStr (void *v1, void *v2);
+void Map_FreeClauses (void *arr_clauses);
 
 // Parsing helpers.
 // ======================================================================
@@ -385,13 +396,26 @@ static inline void Parse_States (DATA * data)
                        Str_SizeOf(), sizeof(struct clause *),
                        NULL,                        // the hash function
                        Map_FreeStr, Map_CmpStr,     // key functions
-                       NULL, NULL);
+                       Map_FreeClauses, NULL);
 
    // Parse the states.
    while (!DONE) Parse_State (data, map);
    data->prog->states = map;
    
 }
+
+/*
+
+Map *Map_Make (int init_capacity,
+               int szKey,
+               int szVal,
+               unsigned int (*hash)(void *),
+               void (*freeKeys)(void *),
+               int (*cmpKeys)(void *, void *),
+               void (*freeVals)(void *), 
+               int (*cmpVals)(void *, void *));
+
+*/
 
 static inline struct clause *Parse_Clause (DATA *data)
 {
@@ -548,7 +572,7 @@ static inline int count_states (DATA * data)
 // ======================================================================
 
 
-static inline void validate_program (struct program *program)
+static inline void validate_program (Program *program)
 {
    if (program->num_inputs < 0)
       fprintf(stderr, "Program has %d inputs - should have a non-negative amount.", program->num_inputs);
@@ -576,12 +600,24 @@ int Map_CmpStr (void *v1, void *v2)
    return Str_Cmp(s1, s2);
 }
 
+   /**
+      program->states is a mapping from Str -> null-terminated array of clauses.
+   **/
+void Map_FreeClauses (void *arr_clauses)
+{
+   Clause **clauses = (Clause **)arr_clauses;
+   int i;
+   for (i=0; clauses[i] != NULL; i++) {
+      Clause_Free(clauses[i]);
+   }
+   free(arr_clauses);
+}
 
 
 // Public functions.
 // ======================================================================
 
-struct program *Parse_Program (Str *string)
+Program *Parse_Program (Str *string)
 {
 
    // Ready the parser.
@@ -590,7 +626,7 @@ struct program *Parse_Program (Str *string)
    data->len = Str_Len(string);
    data->text = Str_Guts(string);
    data->line_num = 1;
-   data->prog = malloc(sizeof (struct program));
+   data->prog = malloc(sizeof (Program));
 
    // Parse meta info.
    Parse_Header(data);
@@ -599,7 +635,7 @@ struct program *Parse_Program (Str *string)
    Parse_States(data);
 
    // Check the program is a good one.
-   //validate_program(data->prog);
+   // validate_program(data->prog);
    
    // Free stuff.
    free(data);
@@ -643,7 +679,7 @@ int main (int argc, char **argv)
    Str *prog_text = Str_Make(buffer);
    
    // Do parsing.
-   struct program *prog = Parse_Program(prog_text);
+   Program *prog = Parse_Program(prog_text);
    
    // Display parsing details.
    printf("\n");
@@ -658,7 +694,8 @@ int main (int argc, char **argv)
 
    // Tear down everything.
    Str_Free(prog_text);
-   // .. should also free the struct program here.
+   // Program_Free(prog);
+   // something fucks up when freeing, should investigate.
    return 0;
    
    IOerr:

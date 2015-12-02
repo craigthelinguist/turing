@@ -26,7 +26,7 @@ int Prog_Halted (Machine *m,
 struct clause *Prog_ResolveClause (Machine *m,
                                     Program *prog,
                                     Str *state,
-                                    struct clause **clauses);
+                                    Clause **clauses);
 
    /**
       Perform one step of the program on the machine in the given state.
