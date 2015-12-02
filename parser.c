@@ -137,7 +137,9 @@ static inline void Parse_Name (DATA *);
 static inline void Parse_Inputs (DATA *);
 static inline void Parse_InitState (DATA *);
 static inline void Parse_States (DATA *);
-static inline void Parse_State (DATA *, Map *);
+static inline void Parse_State (DATA *);
+static inline void Parse_Clause (DATA *data, int index, char *inputs,
+                                 Action *acts, Str **end_states);
 
 // Static analysis.
 static inline int count_states (DATA *);
@@ -311,12 +313,13 @@ static inline void Parse_Header (DATA * data)
       else if (Str_EqIgnoreCase(s, "inputs")) {
          if (inputs) ERR("Number of inputs defined twice.");
          Parse_Inputs(data);
-         if (data->prog->num_inputs < 0)
-            ERR("Specified number of inputs as %d: must be a non-negative amount.", data->prog->num_inputs);
+         if (Prog_NumInputs(data->prog) < 0)
+            ERR("Specified number of inputs as %d: must be a non-negative amount.",
+                Prog_NumInputs(data->prog));
          inputs = 1;      
       }
 
-      // Case: parsing name of initial state..
+      // Case: parsing name of initial state.
       else if (Str_EqIgnoreCase(s, "init")) {
          if (init) ERR("Initial state defined twice.");
          Parse_InitState(data);
@@ -344,9 +347,8 @@ static inline void Parse_Name (DATA * data)
    if (!gobble_str_insensitive(data, "Name"))
       ERR("Expected name declaration.");
    COLON;
-   data->prog->name = malloc(Str_SizeOf());
    Str *s = parse_string(data);
-   memcpy(data->prog->name, s, Str_SizeOf());
+   Prog_SetName(data->prog, s);
    free(s);
    TERMINATOR;
 }
@@ -359,7 +361,8 @@ static inline void Parse_Inputs (DATA * data)
    if (!gobble_str_insensitive(data, "Inputs"))
       ERR("Expected inputs declaration.");
    COLON;
-   data->prog->num_inputs = parse_number(data);
+   int num_inputs = parse_number(data);
+   Prog_SetNumInputs(data->prog, num_inputs);
    TERMINATOR;
 }
 
@@ -372,8 +375,7 @@ static inline void Parse_InitState (DATA * data)
       ERR("Expected declaration of initial state.");
    COLON;
    Str *init_state = parse_string(data);
-   data->prog->init_state = malloc(Str_SizeOf());
-   memcpy(data->prog->init_state, init_state, Str_SizeOf());
+   Prog_SetInitState(data->prog, init_state);
    free(init_state);
    TERMINATOR;
 }
@@ -391,33 +393,52 @@ static inline void Parse_States (DATA * data)
    if (num_states == 0)
       ERR("No states found!");
 
-   // Mapping of Str -> State
-   Map *map = Map_Make(num_states,                  // size of map
-                       Str_SizeOf(), sizeof(struct clause *),
-                       NULL,                        // the hash function
-                       Map_FreeStr, Map_CmpStr,     // key functions
-                       Map_FreeClauses, NULL);
-
    // Parse the states.
-   while (!DONE) Parse_State (data, map);
-   data->prog->states = map;
+   while (!DONE) Parse_State (data);
    
 }
 
-/*
+static inline void Parse_State (DATA *data)
+{
 
-Map *Map_Make (int init_capacity,
-               int szKey,
-               int szVal,
-               unsigned int (*hash)(void *),
-               void (*freeKeys)(void *),
-               int (*cmpKeys)(void *, void *),
-               void (*freeVals)(void *), 
-               int (*cmpVals)(void *, void *));
+   // Parse name of state.
+   Str *state_name = parse_string(data);
 
-*/
+   if (Prog_IsStateDefined(data->prog, state_name))
+      ERR("Duplicate state found.");
+   COLON;
 
-static inline struct clause *Parse_Clause (DATA *data)
+   // Count number of clauses.
+   int num_clauses = count_clauses(data);
+   if (num_clauses < 1)
+      ERR("Need at least one clause.");
+
+   char *clauses_inputs = calloc(num_clauses + 1, sizeof(char));
+   Action *clauses_acts = calloc(num_clauses + 1, sizeof(Action));
+   Str **clauses_strs = calloc(num_clauses + 1, sizeof(Str *));
+
+   // Parse the clauses.
+   int i;
+   for (i=0; i < num_clauses; i++) {
+      Parse_Clause (data, i, clauses_inputs, clauses_acts, clauses_strs);
+   }
+
+   // Put the state -> clauses pair into the program.
+   Prog_AddState (data->prog, state_name, num_clauses, clauses_inputs, clauses_acts, clauses_strs);
+   
+   // This is the price of freedom.
+   free(state_name);
+   free(clauses_inputs);
+   free(clauses_acts);
+   for (i=0; i < num_clauses; i++) {
+      Str_Free(clauses_strs[i]);
+   }
+   free(clauses_strs);
+
+}
+
+static inline void Parse_Clause (DATA *data, int index, char *inputs,
+                                 Action *acts, Str **end_states)
 {
    
    // Parse the clause.
@@ -449,43 +470,15 @@ static inline struct clause *Parse_Clause (DATA *data)
    else
       ERR("Unknown action for clause.");
 
-   // Construct and return clause.
-   struct clause *cl = malloc(sizeof (struct clause));
-   cl->input = input;
-   cl->action = act;
-   cl->end_state = Str_Make(Str_Guts(transition));
+   // Put data at current index.
+   inputs[index] = input;
+   acts[index] = act;
+   end_states[index] = Str_Make(Str_Guts(transition));
+
+   // Free all the stuff we've used.
    free(input_s);
    free(action);
    free(transition);
-   return cl;
-
-}
-
-static inline void Parse_State (DATA *data, Map *map)
-{
-
-   // Parse name of state.
-   Str *str = parse_string(data);
-
-   if (Map_Contains (map, str))
-      ERR("Duplicate state found.");
-   COLON;
-
-   // Count number of clauses.
-   int num_clauses = count_clauses(data);
-   if (num_clauses < 1)
-      ERR("Need at least one clause.");
-   struct clause **clauses = calloc(num_clauses, sizeof (struct clause));
-   
-   // Parse the clauses.
-   int i;
-   for (i=0; i < num_clauses; i++){
-      clauses[i] = Parse_Clause (data);
-   }
-
-   // Put into map.
-   Map_Put (map, str, clauses);
-   free(str);
 
 }
 
@@ -568,49 +561,20 @@ static inline int count_states (DATA * data)
 }
 
 
-// Static analysis functions.
+// Static analysis functions. Maybe should be a separate module?
 // ======================================================================
 
-
-static inline void validate_program (Program *program)
+static inline void validate_program (Program *prog)
 {
-   if (program->num_inputs < 0)
-      fprintf(stderr, "Program has %d inputs - should have a non-negative amount.", program->num_inputs);
+
+   /*
+   if (Prog_NumInputs(prog) < 0)
+      fprintf(stderr, "Program has %d inputs - should have a non-negative amount.",
+              Prog_NumInputs(prog));
    if (!Map_Contains(program->states, program->init_state))
-      fprintf(stderr, "Initial state is %s, which hasn't been defined.", Str_Guts(program->init_state));
-}
-
-
-
-// Used for map lookups.
-// ======================================================================
-
-void Map_FreeStr (void *s)
-{
-   Str *str = s;
-   Str_Free(str);
-}
-
-int Map_CmpStr (void *v1, void *v2)
-{
-   Str *s1 = v1;
-   Str *s2 = v2;
-   if (Str_Len(s1) != Str_Len(s2))
-      return 1;
-   return Str_Cmp(s1, s2);
-}
-
-   /**
-      program->states is a mapping from Str -> null-terminated array of clauses.
-   **/
-void Map_FreeClauses (void *arr_clauses)
-{
-   Clause **clauses = (Clause **)arr_clauses;
-   int i;
-   for (i=0; clauses[i] != NULL; i++) {
-      Clause_Free(clauses[i]);
-   }
-   free(arr_clauses);
+      fprintf(stderr, "Initial state is %s, which hasn't been defined.",
+              Str_Guts(Prog_InitState(prog))); // TODO: this is a memory leak :(
+   */
 }
 
 
@@ -626,7 +590,7 @@ Program *Parse_Program (Str *string)
    data->len = Str_Len(string);
    data->text = Str_Guts(string);
    data->line_num = 1;
-   data->prog = malloc(sizeof (Program));
+   data->prog = Prog_Make();
 
    // Parse meta info.
    Parse_Header(data);
@@ -681,21 +645,31 @@ int main (int argc, char **argv)
    // Do parsing.
    Program *prog = Parse_Program(prog_text);
    
-   // Display parsing details.
+   // Extract parsing details.
+   Str *name_s = Prog_Name(prog);
+   Str *init_state_s = Prog_InitState(prog);
+   char *name = Str_Guts(name_s);
+   char *init_state = Str_Guts(init_state_s);
+   int num_states = Prog_NumStates(prog);
+   int num_inputs = Prog_NumInputs(prog);
+   
+   // Print info.
    printf("\n");
    printf("%s parsed.\n\n", argv[1]);
    printf("DETAILS\n");
    printf("==============\n");
-   printf("Program name: %s\n", Str_Guts(prog->name));
-   printf("Number of inputs: %d\n", prog->num_inputs);
-   printf("Initial state: %s\n", Str_Guts(prog->init_state));
-   printf("Number of states: %d\n", Map_Size(prog->states));
+   printf("Program name: %s\n", name);
+   printf("Number of inputs: %d\n", num_inputs);
+   printf("Initial state: %s\n", init_state);
+   printf("Number of states: %d\n", num_states);
    printf("\n");   
 
    // Tear down everything.
+   free(name_s); free(init_state_s);
+   free(name); free(init_state);
    Str_Free(prog_text);
-   // Program_Free(prog);
-   // something fucks up when freeing, should investigate.
+   // Prog_Free(prog);
+   // TODO: something fucks up when freeing this.
    return 0;
    
    IOerr:

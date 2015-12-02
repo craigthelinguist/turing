@@ -1,5 +1,4 @@
 
-
 #ifndef MAP_H
    #include "map.h"
 #endif
@@ -8,6 +7,7 @@
    #include "str.h"
 #endif
 
+
 #define BLANK 0
 
 typedef enum action { LEFT, RIGHT, PRINT } Action;
@@ -15,24 +15,32 @@ typedef enum action { LEFT, RIGHT, PRINT } Action;
 typedef struct program Program;
 typedef struct clause Clause;
 
-int SizeOf_Program ();
-int SizeOf_Clause ();
-void Program_Free (Program *pr);
-void Clause_Free (Clause *cl);
 
-   /**
-      Each file describes one program.
-    **/
-struct program {
-   Map *states; // Str -> Array of Clauses
-   Str *name;
-   Str *init_state;
-   int num_inputs;
-};
+// Public functions for using and accessing a program.
+// ============================================================0
 
-struct clause {
-   char input;
-   Action action;
-   Str *end_state;
-};
+int Prog_NumInputs (Program *prog);
+Str *Prog_Name (Program *prog);
+Str *Prog_InitState (Program *prog);
+
+int Prog_IsStateDefined (Program *prog, Str *s);
+int Prog_NumStates (Program *prog);
+
+// Public functions for creating/setting up a new program.
+// ============================================================
+
+void Prog_SetName (Program *prog, Str *str);
+void Prog_SetInitState (Program *prog, Str *state_name);
+void Prog_SetNumInputs (Program *prog, int inputs);
+
+void Prog_AddState (Program *prog, Str *state_name, int num_clauses,
+                    char *inputs, Action *acts, Str **end_states);
+
+void Prog_Free (Program *pr);
+Program *Prog_Make (void);
+int Prog_SizeOf (void);
+
+
+
+
 
