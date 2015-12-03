@@ -32,37 +32,18 @@ NUMBER      ::= [0-9]+
 // Headers.
 // ======================================================================
 
-#ifndef CTYPE_H
-   #include <ctype.h>
-#endif
-#ifndef STRCMP_H
-   #include <string.h>
-#endif
-#ifndef STDIO_H
-   #include <stdio.h>
-#endif
-#ifndef STDLIB_H
-   #include <stdlib.h>
-#endif
-#ifndef UNISTD_H
-   #include <unistd.h>
-#endif
+#include <ctype.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
-#ifndef STR_H
-   #include "str.h"
-#endif
+#include "str.h"
+#include "map.h"
+#include "list.h"
 
-#ifndef MAP_H
-   #include "map.h"
-#endif
+#include "program.h"
 
-#ifndef LIST_H
-   #include "list.h"
-#endif
-
-#ifndef PROGRAM_H
-   #include "program.h"
-#endif
 
 // Some handy macros.
 // ======================================================================
@@ -459,16 +440,11 @@ static inline void Parse_Clause (DATA *data, int index, char *inputs,
 
    // Convert action to an instruction.
    Action act; char output;
-   if (Str_Eq(action, "right"))
-      act = M_RIGHT, output = '\0';
-   else if (Str_Eq(action, "left"))
-      act = M_LEFT, output = '\0';
-   else if (Str_Eq(input_s, "blank"))
-      act = M_PRINT, output = ' ';
-   else if (Str_Len(input_s) == 1)
-      act = M_PRINT, output = Str_CharAt(input_s, 0);
-   else
-      ERR("Unknown action for clause.");
+   if (Str_Eq(action, "right"))        { act = M_RIGHT; output = '\0'; }
+   else if (Str_Eq(action, "left"))    { act = M_LEFT;  output = '\0'; }
+   else if (Str_Eq(input_s, "blank"))  { act = M_PRINT; output = ' '; }
+   else if (Str_Len(input_s) == 1)     { act = M_PRINT; output = Str_CharAt(input_s, 0); }
+   else ERR ("Unknown action for clause.");
    Instruction instr = { act, output };
 
    // Put data at current index.

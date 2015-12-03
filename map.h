@@ -1,4 +1,7 @@
 
+#ifndef MAP_H
+#define MAP_H
+
    /**
       A generic Map with copy-by-value semantics.
     **/
@@ -74,15 +77,4 @@ void Map_Put (Map *map, void *key, void *val);
 int Map_Del (Map *map,
              void *key);
 
-
-
-
-
-
-
-
-
-
-
-
-
+#endif

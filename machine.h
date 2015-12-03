@@ -1,15 +1,19 @@
 
-typedef struct machine Machine;
+#ifndef MACHINE_H
+#define MACHINE_H
 
-typedef enum { M_LEFT, M_RIGHT, M_PRINT } Action;
+   typedef struct machine Machine;
 
-// Constructing and destructing machines.
-Machine *MakeMachine (void);
-void DelMachine (Machine *m);
+   typedef enum { M_LEFT, M_RIGHT, M_PRINT, M_ERR } Action;
 
-// Machine instructions.
-void Write (Machine *m, char c);
-int Read (Machine *m, char c);
-void MvRight (Machine *m);
-void MvLeft (Machine *m);
+   // Constructing and destructing machines.
+   Machine *MakeMachine (void);
+   void DelMachine (Machine *m);
 
+   // Machine instructions.
+   void M_Write (Machine *m, char c);
+   char M_Read (Machine *m);
+   void M_MvRight (Machine *m);
+   void M_MvLeft (Machine *m);
+
+#endif

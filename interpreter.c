@@ -1,25 +1,14 @@
 
-#ifndef STDLIB_H
-   #include <stdlib.h>
-#endif
-
-#ifndef INTERPRETER_H
-   #include "interpreter.h"
-#endif
-
-#ifndef MAP_H
-   #include "map.h"
-#endif
+#include <stdlib.h>
+#include "map.h"
+#include "interpreter.h"
 
 int
 Prog_Halted (struct machine *m, Program *prog, Str *state)
 {
-   return Str_EqIgnoreCase(state, "halt");
+   return state == NULL || Str_EqIgnoreCase(state, "halt");
 }
 
-   /**
-      Execute one step of the machine.
-   **/
 void
 Prog_Step (Machine *m, Program *prog, Str *state)
 {
@@ -27,57 +16,29 @@ Prog_Step (Machine *m, Program *prog, Str *state)
    // Check if you are in the halting state.
    if (Prog_Halted(m, prog, state)) return;
    
-   // Look up clauses for current state.
-   Clause **clauses = Map_Get (prog->states, state);
+   // Read input. Look up the appropriate instruction.
+   char input = M_Read(m);
+   Instruction instr = Prog_NextInstruction(prog, state, input);
 
-   // If no such state defined, halt.
-   if (clauses == NULL) {
-      state = NULL;
-      return;
-   }
-   
-   // Clause resolution.
-   struct clause *cl = Prog_ResolveClause(m, prog, state, clauses);
-
-   // If could not resolve clause, halt.
-   if (cl == NULL) {
-      state = NULL;
-      return;
-   }
-
-   // Perform clause.
-   switch (cl->action) {
-   
-      case LEFT:
-         MvLeft(m);
+   // Perform instruction.
+   switch (instr.action) {
+      case M_ERR:
+         state = NULL;
          break;
-      case RIGHT:
-         MvRight(m);
+      case M_LEFT:
+         M_MvLeft(m);
          break;
-      case PRINT:
+      case M_RIGHT:
+         M_MvRight(m);
+         break;
+      case M_PRINT:
          // should print shit here
          break;
-
    }
 
-   // Transition.
-   state = cl->end_state;
-
-}
-
-
-
-struct clause *
-Prog_ResolveClause (Machine *m, Program *prog, Str *state, struct clause **clauses)
-{
-   struct clause *cl = NULL;
-   int i;
-   for (i=0; clauses[i] != NULL; i++) {
-      if (Read(m, clauses[i]->input)) {
-         cl = clauses[i];
-         break;
-      }
+   // Look up and perform transition.
+   if (state != NULL) {
+      state = Prog_NextTransition (prog, state, input);
    }
-   return cl;
-}
 
+}

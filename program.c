@@ -1,29 +1,12 @@
 
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#ifndef STDIO_H
-   #include <stdio.h>
-#endif
-
-#ifndef STDLIB_H
-   #include <stdlib.h>
-#endif
-
-#ifndef STRING_H
-   #include <string.h>
-#endif
-
-#ifndef PROGRAM_H
-   #include "program.h"
-#endif
-
-#ifndef STR_H
-   #include "str.h"
-#endif
-
-#ifndef MAP_H
-   #include "map.h"
-#endif
+#include "str.h"
+#include "map.h"
+#include "program.h"
 
 
 #define ERR_MSG(...) do {\
@@ -176,8 +159,50 @@ int Prog_NumStates (struct program *prog)
    return Map_Size(prog->states);
 }
 
+Instruction Prog_NextInstruction (Program *prog, Str *state, char input)
+{
 
+   // Check the state exists.
+   if (!Map_Contains(prog->states, state)) {
+      Instruction instr = { M_ERR, '\0' };
+      return instr;
+   }
 
+   // Look through clauses and return the appropriate instruction.
+   struct clause **clauses = Map_Get(prog->states, state);
+   int i;
+   for (i=0; clauses[i] != '\0'; i++) {
+      if (clauses[i]->input == input) {
+         return clauses[i]->instruction;      
+      }   
+   }
+
+   // If no clause matches the input then return ERR.
+   Instruction instr = { M_ERR, '\0' };
+   return instr;
+
+}
+
+Str *Prog_NextTransition (Program *prog, Str *state, char input)
+{
+   
+   // Check the state exists.
+   if (!Map_Contains(prog->states, state))
+      return NULL;
+
+   // Look through clauses and return the appropriate instruction.
+   struct clause **clauses = Map_Get(prog->states, state);
+   int i;
+   for (i=0; clauses[i] != '\0'; i++) {
+      if (clauses[i]->input == input) {
+         return clauses[i]->end_state;      
+      }   
+   }
+
+   // If no clause matches the input then return ERR.
+   return NULL;
+
+}
 
 
 // Public functions for allocating, deleting programs.

@@ -2,13 +2,8 @@
 // Header files.
 // ======================================================================
 
-#ifndef STDLIB_H
-   #include <stdlib.h>
-#endif
-
-#ifndef STDLIB_H
-   #include <string.h>
-#endif
+#include <stdlib.h>
+#include <string.h>
 
 #include "list.h"
 #include "map.h"

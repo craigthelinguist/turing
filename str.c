@@ -3,21 +3,10 @@
 // Headers.
 // ============================================================
 
-#ifndef STDIO_H
-   #include <stdio.h>
-#endif
-
-#ifndef STDLIB_H
-   #include <stdlib.h>
-#endif
-
-#ifndef STRING_H
-   #include <string.h>
-#endif
-
-#ifndef CTYPE_H
-   #include <ctype.h>
-#endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
 #include "str.h"
 

@@ -1,7 +1,9 @@
 
 
-#include "machine.h"
 #include <stdlib.h>
+
+#include "machine.h"
+
 
 #define TAPE_SIZE 100
 
@@ -81,19 +83,19 @@ DelTape (struct Tape *tape) {
 // ============================================================
 
 void
-Write (struct machine *m, char c) {
+M_Write (struct machine *m, char c) {
    int head = m->head;
    (m->current->cells)[head] = c;
 }
 
-int
-Read (struct machine *m, char c) {
+char
+M_Read (struct machine *m) {
    int head = m->head;
-   return (m->current->cells)[head] == c;
+   return (m->current->cells)[head];
 }
 
 void
-MvRight (struct machine *m) {
+M_MvRight (struct machine *m) {
    int head = (m->head + 1) % TAPE_SIZE;
    if (head == 0) {
       struct Tape *next_tape = MakeTape();
@@ -103,7 +105,7 @@ MvRight (struct machine *m) {
 }
 
 void
-MvLeft (struct machine *m) {
+M_MvLeft (struct machine *m) {
    int head = (m->head - 1) % TAPE_SIZE;
    if (head == -1) {
       head = TAPE_SIZE - 1; // Wrap around to end.

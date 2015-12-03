@@ -1,4 +1,9 @@
 
+
+
+#ifndef STR_H
+#define STR_H
+
 typedef struct str Str;
 
 
@@ -22,3 +27,5 @@ int Str_Eq (Str *str, char *txt);
 int Str_EqIgnoreCase (Str *str, char *txt);
 
 int Str_SizeOf ();
+
+#endif

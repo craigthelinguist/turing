@@ -1,4 +1,7 @@
 
+#ifndef LIST_H
+#define LIST_H
+
 typedef struct list List;
 
    /**
@@ -96,4 +99,5 @@ int List_Del (List *list,
          item : item you're searching for. */
 int List_Remove (List *list,
                  void *item);
-   
+
+#endif
