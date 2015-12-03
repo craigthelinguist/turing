@@ -61,7 +61,8 @@ NUMBER      ::= [0-9]+
 #endif
 
 #ifndef PROGRAM_H
-
+   #include "program.h"
+#endif
 
 // Some handy macros.
 // ======================================================================
@@ -137,7 +138,7 @@ static inline void Parse_InitState (DATA *);
 static inline void Parse_States (DATA *);
 static inline void Parse_State (DATA *);
 static inline void Parse_Clause (DATA *data, int index, char *inputs,
-                                 Action *acts, Str **end_states);
+                                 Instruction *instrs, Str **end_states);
 
 // Static analysis.
 static inline int count_states (DATA *);
@@ -412,22 +413,23 @@ static inline void Parse_State (DATA *data)
       ERR("Need at least one clause.");
 
    char *clauses_inputs = calloc(num_clauses + 1, sizeof(char));
-   Action *clauses_acts = calloc(num_clauses + 1, sizeof(Action));
+   Instruction *clauses_instrs = calloc(num_clauses + 1, sizeof(Instruction));
    Str **clauses_strs = calloc(num_clauses + 1, sizeof(Str *));
 
    // Parse the clauses.
    int i;
    for (i=0; i < num_clauses; i++) {
-      Parse_Clause (data, i, clauses_inputs, clauses_acts, clauses_strs);
+      Parse_Clause (data, i, clauses_inputs, clauses_instrs, clauses_strs);
    }
 
    // Put the state -> clauses pair into the program.
-   Prog_AddState (data->prog, state_name, num_clauses, clauses_inputs, clauses_acts, clauses_strs);
+   Prog_AddState (data->prog, state_name, num_clauses,
+                  clauses_inputs, clauses_instrs, clauses_strs);
    
    // This is the price of freedom.
    free(state_name);
    free(clauses_inputs);
-   free(clauses_acts);
+   free(clauses_instrs);
    for (i=0; i < num_clauses; i++) {
       Str_Free(clauses_strs[i]);
    }
@@ -436,7 +438,7 @@ static inline void Parse_State (DATA *data)
 }
 
 static inline void Parse_Clause (DATA *data, int index, char *inputs,
-                                 Action *acts, Str **end_states)
+                                 Instruction *instructions, Str **end_states)
 {
    
    // Parse the clause.
@@ -455,22 +457,23 @@ static inline void Parse_Clause (DATA *data, int index, char *inputs,
       ERR("Input for clause must be a single character or blank.");
    input = Str_CharAt(input_s, 0);
 
-   // Convert action to appropriate thing.
-   Action act;
+   // Convert action to an instruction.
+   Action act; char output;
    if (Str_Eq(action, "right"))
-      act = RIGHT;
+      act = M_RIGHT, output = '\0';
    else if (Str_Eq(action, "left"))
-      act = LEFT;
+      act = M_LEFT, output = '\0';
    else if (Str_Eq(input_s, "blank"))
-      act = PRINT;
+      act = M_PRINT, output = ' ';
    else if (Str_Len(input_s) == 1)
-      act = PRINT;
+      act = M_PRINT, output = Str_CharAt(input_s, 0);
    else
       ERR("Unknown action for clause.");
+   Instruction instr = { act, output };
 
    // Put data at current index.
    inputs[index] = input;
-   acts[index] = act;
+   instructions[index] = instr;
    end_states[index] = Str_Make(Str_Guts(transition));
 
    // Free all the stuff we've used.

@@ -1,6 +1,8 @@
 
 typedef struct machine Machine;
 
+typedef enum { M_LEFT, M_RIGHT, M_PRINT } Action;
+
 // Constructing and destructing machines.
 Machine *MakeMachine (void);
 void DelMachine (Machine *m);

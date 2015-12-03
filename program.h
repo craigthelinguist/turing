@@ -7,17 +7,23 @@
    #include "str.h"
 #endif
 
+#ifndef MACHINE_H
+   #include "machine.h"
+#endif
 
 #define BLANK 0
-
-typedef enum action { LEFT, RIGHT, PRINT } Action;
 
 typedef struct program Program;
 typedef struct clause Clause;
 
+typedef struct instruction {
+   Action action;
+   char output;
+} Instruction;
+
 
 // Public functions for using and accessing a program.
-// ============================================================0
+// ============================================================
 
 int Prog_NumInputs (Program *prog);
 Str *Prog_Name (Program *prog);
@@ -34,7 +40,7 @@ void Prog_SetInitState (Program *prog, Str *state_name);
 void Prog_SetNumInputs (Program *prog, int inputs);
 
 void Prog_AddState (Program *prog, Str *state_name, int num_clauses,
-                    char *inputs, Action *acts, Str **end_states);
+                    char *inputs, Instruction *instrs, Str **end_states);
 
 void Prog_Free (Program *pr);
 Program *Prog_Make (void);

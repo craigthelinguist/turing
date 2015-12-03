@@ -66,7 +66,7 @@ struct program {
    **/
 struct clause {
    char input;
-   Action action;
+   Instruction instruction;
    Str *end_state;
 };
 
@@ -82,17 +82,12 @@ void Prog_Free (struct program *prog);
 // Private function declarations.
 // ======================================================================
 
-struct clause *Clause_Make (char input, Action act, Str *end_state);
+struct clause *Clause_Make (char input, Instruction instr, Str *end_state);
 void Clause_Free (struct clause *clause);
 int Clause_SizeOf();
 void Map_FreeStr (void *s);
 int Map_CmpStr (void *v1, void *v2);
 void Map_FreeClauses (void *arr_clauses);
-
-
-
-
-
 
 
 
@@ -123,7 +118,7 @@ void Prog_SetNumInputs (struct program *prog, int inputs)
 }
 
 void Prog_AddState (Program *prog, Str *state_name, int num_clauses,
-                    char *inputs, Action *acts, Str **end_states)
+                    char *inputs, struct instruction *instrs, Str **end_states)
 {
 
    // Error checking.
@@ -136,7 +131,7 @@ void Prog_AddState (Program *prog, Str *state_name, int num_clauses,
    // Allocate and build clauses.
    int i;
    for (i=0 ; i < num_clauses; i++) {
-      arr_clauses[i] = Clause_Make(inputs[i], acts[i], end_states[i]);
+      arr_clauses[i] = Clause_Make(inputs[i], instrs[i], end_states[i]);
    }
 
    // Put into map.
@@ -221,11 +216,11 @@ int Prog_SizeOf()
 // Private functions.
 // ======================================================================
 
-struct clause *Clause_Make (char input, Action act, Str *end_state)
+struct clause *Clause_Make (char input, Instruction instr, Str *end_state)
 {
    struct clause *cl = malloc(Clause_SizeOf());
    cl->input = input;
-   cl->action = act;
+   cl->instruction = instr;
    cl->end_state = malloc(Str_SizeOf());
    memcpy(cl->end_state, end_state, Str_SizeOf());
    return cl;
