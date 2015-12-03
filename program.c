@@ -27,7 +27,7 @@
          name : the name of the program.
          init_state : state the program should start in.
          num_inputs : number of inputs to the program. 
-         setup_complete : whether the program has been correctly set up.   
+         finalised : whether the program has been correctly set up.   
             If a program has been set up it is an error to try and modify
             its members.
    **/
@@ -36,7 +36,7 @@ struct program {
    Str *name;
    Str *init_state;
    int num_inputs;
-   int setup_complete;
+   int finalised;
 };
 
    /**
@@ -52,7 +52,6 @@ struct clause {
    Instruction instruction;
    Str *end_state;
 };
-
 
 
 // Public function declarations.
@@ -74,30 +73,48 @@ void Map_FreeClauses (void *arr_clauses);
 
 
 
-// Functions for program set-up.
+// Modifying functions.
 // ======================================================================
 
 void Prog_SetName (struct program *prog, Str *str)
 {
-   if (prog->setup_complete)
-      ERR_MSG("Program name cannot be modified.");
+
+   // Error check.
+   if (prog->finalised)
+      ERR_MSG("Error setting program name:\
+               program metadata cannot be modified after it has been finalised.");
+
+   // Copy name and set string.
    prog->name = malloc(Str_SizeOf());
    memcpy(prog->name, str, Str_SizeOf());
+
 }
 
 void Prog_SetInitState (struct program *prog, Str *state_name)
 {
-   if (prog->setup_complete)
-      ERR_MSG("Initial state of program cannot be modified.");
+
+   // Error check.
+   if (prog->finalised)
+      ERR_MSG("Error setting initial state:\
+               program metadata cannot be modified after it has been finalised.");
+
+   // Copy name and set string.
    prog->init_state = malloc(Str_SizeOf());
    memcpy(prog->init_state, state_name, Str_SizeOf());
+
 }
 
 void Prog_SetNumInputs (struct program *prog, int inputs)
 {
-   if (prog->setup_complete)
-      ERR_MSG("Number of program inputs may not be modified.");
+   
+   // Error check.
+   if (prog->finalised)
+      ERR_MSG("Error setting number of inputs to program:\
+               program metadata cannot be modified after it has been finalised.");
+
+   // Set inputs.
    prog->num_inputs = inputs;
+
 }
 
 void Prog_AddState (Program *prog, Str *state_name, int num_clauses,
@@ -105,6 +122,9 @@ void Prog_AddState (Program *prog, Str *state_name, int num_clauses,
 {
 
    // Error checking.
+   if (prog->finalised)
+      ERR_MSG("Error adding state to program:\
+               program cannot be modified after it has been finalised.");
    if (num_clauses <= 0)
       ERR_MSG("Need at least 1 clause per state.");
 
@@ -121,9 +141,37 @@ void Prog_AddState (Program *prog, Str *state_name, int num_clauses,
    Str *s = malloc(Str_SizeOf());
    memcpy(s, state_name, Str_SizeOf());
    Map_Put(prog->states, s, arr_clauses);
+
 }
 
+void Prog_Finalise (Program *prog)
+{
 
+   // Check user is calling at the right time.
+   if (prog->finalised)
+      ERR_MSG("Error finalising: Program is already finalised.");
+   
+   // Check everything has been defined.
+   if (prog->states == NULL || Prog_NumInputs(prog) <= 0)
+      ERR_MSG("Error finalising: program has no states.");
+
+   if (prog->name == NULL)
+      ERR_MSG("Error finalising: program has no name.");
+
+   if (prog->init_state == NULL)
+      ERR_MSG("Error finalising: program has no initial state.");
+
+   // Check those definitions are sensible.
+   if (!Prog_IsStateDefined(prog, prog->init_state))
+      ERR_MSG("Error finalising: could not find the specified initial state.");
+
+   if (prog->num_inputs < 0)
+      ERR_MSG("Error finalising: program must have non-negative number of inputs.");
+   
+   // Everything looks fine; mark program as finalised.
+   prog->finalised = 1;
+
+}
 
 
 
@@ -215,7 +263,7 @@ Program *Prog_Make (void)
    prog->name = NULL;
    prog->init_state = NULL;
    prog->num_inputs = -1;
-   prog->setup_complete = 0;
+   prog->finalised = 0;
    return prog;
 }
 
@@ -231,10 +279,6 @@ int Prog_SizeOf()
 {
    return sizeof(struct program);
 }
-
-
-
-
 
 
 
@@ -282,12 +326,9 @@ int Map_CmpStr (void *v1, void *v2)
    return Str_Cmp(s1, s2);
 }
 
-   /**
-      program->states is a mapping from Str -> null-terminated array of clauses.
-   **/
 void Map_FreeClauses (void *arr_clauses)
 {
-   Clause **clauses = (Clause **)arr_clauses;
+   struct clause**clauses = (struct clause**)arr_clauses;
    int i;
    for (i=0; clauses[i] != NULL; i++) {
       Clause_Free(clauses[i]);

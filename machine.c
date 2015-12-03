@@ -8,24 +8,24 @@
 #define TAPE_SIZE 100
 
 
-/** This is the internal representation of a machine.
-    It's basically a linked list. **/
-struct Tape *MakeTape (void);
-void DelTape (struct Tape *);
-
-struct Tape {
+struct tape {
    char cells[TAPE_SIZE];
-   struct Tape *prev;
-   struct Tape *next;
+   struct tape *prev;
+   struct tape *next;
 };
 
-/** This is the actual implementation of a machine. **/
+/** This is the internal representation of a machine.
+    It's basically a linked list that grows in size
+    when it needs to. **/
 struct machine {
    int head;
    int state;
-   struct Tape *leftmost;
-   struct Tape *current;
+   struct tape *leftmost;
+   struct tape *current;
 };
+
+struct tape *Tape_Make (void);
+void Tape_Del (struct tape *);
 
 
 
@@ -33,24 +33,24 @@ struct machine {
 // ============================================================
 
 struct machine *
-MakeMachine (void)
+M_Make (void)
 {
    struct machine *m = malloc(sizeof (struct machine));
    m->head = (int) (TAPE_SIZE/2); // Put in middle of tape.
-   m->leftmost = MakeTape();
+   m->leftmost = Tape_Make();
    m->current = m->leftmost;
    return m;
 }
 
 void
-DelMachine (struct machine *m)
+M_Del (struct machine *m)
 {
   
    // First free all the tapes in this machine.
-   struct Tape *tape = m->leftmost;
+   struct tape *tape = m->leftmost;
    while (tape != NULL) {
-      struct Tape *next = tape->next;
-      DelTape(tape);
+      struct tape *next = tape->next;
+      Tape_Del(tape);
       tape = next;
    }
 
@@ -62,16 +62,16 @@ DelMachine (struct machine *m)
 
 }
 
-struct Tape *
-MakeTape () {
-   struct Tape *tape = malloc(sizeof (struct Tape));
+struct tape *
+Tape_Make () {
+   struct tape *tape = malloc(sizeof (struct tape));
    tape->prev = NULL;
    tape->next = NULL;
    return tape;
 }
 
 void
-DelTape (struct Tape *tape) {
+Tape_Del (struct tape *tape) {
    tape->prev = NULL;
    tape->next = NULL;
    free(tape);
@@ -98,7 +98,7 @@ void
 M_MvRight (struct machine *m) {
    int head = (m->head + 1) % TAPE_SIZE;
    if (head == 0) {
-      struct Tape *next_tape = MakeTape();
+      struct tape *next_tape = Tape_Make();
       m->current->next = next_tape;
       m->current = next_tape;
    }
@@ -109,7 +109,7 @@ M_MvLeft (struct machine *m) {
    int head = (m->head - 1) % TAPE_SIZE;
    if (head == -1) {
       head = TAPE_SIZE - 1; // Wrap around to end.
-      struct Tape *prev_tape = MakeTape();
+      struct tape *prev_tape = Tape_Make();
       m->current->prev = prev_tape;
       m->current = prev_tape;
    }

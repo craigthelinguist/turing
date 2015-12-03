@@ -1,6 +1,9 @@
 
 
-/**
+/* This module is for parsing text files describing programs and turning them into
+   some intermediate form that an interpreter can execute on a Turing machine. The
+   input is a string of text describing a program and the output is the actual
+   program. Here is the grammar:
 
 Here is the grammar.
 
@@ -121,10 +124,9 @@ static inline void Parse_State (DATA *);
 static inline void Parse_Clause (DATA *data, int index, char *inputs,
                                  Instruction *instrs, Str **end_states);
 
-// Static analysis.
+// Static analysis - should this move to a separate module?
 static inline int count_states (DATA *);
 static inline int count_clauses (DATA *);
-static inline void validate_program (Program *program);
 
 // For the map.
 void Map_FreeStr (void *s);
@@ -535,23 +537,6 @@ static inline int count_states (DATA * data)
    data->index = ogIndex;
    return num_states;
 
-}
-
-
-// Static analysis functions. Maybe should be a separate module?
-// ======================================================================
-
-static inline void validate_program (Program *prog)
-{
-
-   /*
-   if (Prog_NumInputs(prog) < 0)
-      fprintf(stderr, "Program has %d inputs - should have a non-negative amount.",
-              Prog_NumInputs(prog));
-   if (!Map_Contains(program->states, program->init_state))
-      fprintf(stderr, "Initial state is %s, which hasn't been defined.",
-              Str_Guts(Prog_InitState(prog))); // TODO: this is a memory leak :(
-   */
 }
 
 

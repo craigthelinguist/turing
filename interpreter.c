@@ -32,7 +32,7 @@ Prog_Step (Machine *m, Program *prog, Str *state)
          M_MvRight(m);
          break;
       case M_PRINT:
-         // should print shit here
+         M_Write(m, instr.output);
          break;
    }
 

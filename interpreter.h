@@ -1,4 +1,9 @@
 
+/* This module executes programs on Turing machines. It translates the structure
+   of a program into the underlying Turing machine instructions.
+
+   You can execute a program by repeatedly calling I_Step. A program has finished
+   executing when I_Halted returns a non-negative value. */
 
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
@@ -8,17 +13,14 @@
 #include "machine.h"
 
    /**
-      Check to see if the given state is the halting state.
+      Check if the program has finished executing.
    **/
-int Prog_Halted (Machine *m,
-                 Program *prog,
-                 Str *state);
+int I_Halted (Machine *m, Program *prog, Str *state);
 
    /**
-      Perform one step of the program on the machine in the given state.
+      Perform the next step in the program execution. If there is no next
+      step, or the program has halted, then this does nothing.
    **/
-void Prog_Step (Machine *m,
-                Program *prog,
-                Str *state);
+void I_Step (Machine *m, Program *prog, Str *state);
 
 #endif
