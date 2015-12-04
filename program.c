@@ -259,7 +259,11 @@ Str *Prog_NextTransition (Program *prog, Str *state, char input)
 Program *Prog_Make (void)
 {
    struct program *prog = malloc(Prog_SizeOf());
-   prog->states = NULL;
+   prog->states = Map_Make (10,
+                            Str_SizeOf(), sizeof(struct clause *),
+                            NULL, // hash function
+                            Map_FreeStr, Map_CmpStr,
+                            Map_FreeClauses, NULL);
    prog->name = NULL;
    prog->init_state = NULL;
    prog->num_inputs = -1;
@@ -335,10 +339,6 @@ void Map_FreeClauses (void *arr_clauses)
    }
    free(arr_clauses);
 }
-
-
-
-
 
 
 

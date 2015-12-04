@@ -565,7 +565,7 @@ Program *Parse_Program (Str *string)
    
    // Free stuff.
    free(data);
-   
+
    return data->prog;
 
 }
@@ -603,10 +603,10 @@ int main (int argc, char **argv)
    fread (buffer, sizeof(char), length, f);
    buffer[length] = '\0';
    Str *prog_text = Str_Make(buffer);
-   
+  
    // Do parsing.
    Program *prog = Parse_Program(prog_text);
-   
+  
    // Extract parsing details.
    Str *name_s = Prog_Name(prog);
    Str *init_state_s = Prog_InitState(prog);
@@ -633,11 +633,11 @@ int main (int argc, char **argv)
    // Prog_Free(prog);
    // TODO: something fucks up when freeing this.
    return 0;
-   
+
    IOerr:
       printf("Error reading file: %s\n", argv[1]);
       return 1;
-   
+
 }
 
 
