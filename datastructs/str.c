@@ -65,7 +65,7 @@ void Str_Free (Str *str)
 {
    free(str->chars);
    str->chars = NULL;
-   free(str);
+   str = NULL;
 }
 
 int Str_Cmp (Str *str1, Str *str2)

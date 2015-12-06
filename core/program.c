@@ -12,7 +12,6 @@
 #define ERR_MSG(...) do {\
    fprintf(stderr, __VA_ARGS__);\
    fprintf(stderr, "\n");\
-   abort();\
 } while(0)
 
 
@@ -66,7 +65,7 @@ void Prog_Free (struct program *prog);
 
 struct clause *Clause_Make (char input, Instruction instr, Str *end_state);
 void Clause_Free (struct clause *clause);
-int Clause_SizeOf();
+int Clause_SizeOf();  
 void Map_FreeStr (void *s);
 int Map_CmpStr (void *v1, void *v2);
 void Map_FreeClauses (void *arr_clauses);
@@ -259,11 +258,11 @@ Str *Prog_NextTransition (Program *prog, Str *state, char input)
 Program *Prog_Make (void)
 {
    struct program *prog = malloc(Prog_SizeOf());
-   prog->states = Map_Make (10,
-                            Str_SizeOf(), sizeof(struct clause *),
+   prog->states = Map_Make (2,
+                            Str_SizeOf(), sizeof(struct clause **),
                             NULL, // hash function
                             Map_FreeStr, Map_CmpStr,
-                            Map_FreeClauses, NULL);
+                            NULL, NULL);
    prog->name = NULL;
    prog->init_state = NULL;
    prog->num_inputs = -1;
@@ -274,9 +273,9 @@ Program *Prog_Make (void)
 void Prog_Free (struct program *prog)
 {
    Map_Free(prog->states);
-   Str_Free(prog->name);
-   Str_Free(prog->init_state);
-   free(prog);
+   //Str_Free(prog->name);
+   //Str_Free(prog->init_state);
+   //free(prog);
 }
 
 int Prog_SizeOf()
@@ -332,7 +331,7 @@ int Map_CmpStr (void *v1, void *v2)
 
 void Map_FreeClauses (void *arr_clauses)
 {
-   struct clause**clauses = (struct clause**)arr_clauses;
+   struct clause**clauses = (struct clause **)arr_clauses;
    int i;
    for (i=0; clauses[i] != NULL; i++) {
       Clause_Free(clauses[i]);
