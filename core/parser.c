@@ -630,8 +630,7 @@ int main (int argc, char **argv)
    free(name_s); free(init_state_s);
    free(name); free(init_state);
    Str_Free(prog_text);
-   // Prog_Free(prog);
-   // TODO: something fucks up when freeing this.
+   Prog_Free(prog);
    return 0;
 
    IOerr:

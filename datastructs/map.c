@@ -334,7 +334,7 @@ void Map_Put (Map *map, void *key, void *val)
 }
 
    /**
-      Delete the pair associated with the gievn key.
+      Delete the pair associated with the given key.
       Returns non-negative value if something was deleted.
          map : map the key-value pair is in.
          key : the key indexing the pair to be deleted.
