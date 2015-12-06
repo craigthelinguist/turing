@@ -1,16 +1,18 @@
-COMPILER=gcc
-FLAGS=-Wall -Wundef -Wcast-align -Wpointer-arith -Wstrict-overflow=5 -Winit-self -Waggregate-return
+\CC=gcc
+DIRS=-Idatastructs -Icore -Itests -Iview
+FLAGS=-Wall -Wundef -Wcast-align -Wpointer-arith -Wstrict-overflow=5 -Winit-self $(DIRS)
+VPATH=datastructs:core:view:tests
 
 parser: parser.c program.c map.c list.c str.c
-	$(COMPILER) $(FLAGS) parser.c program.c map.c list.c str.c -o parser
+	$(CC) $(FLAGS) $^ -o $@
 
 interpreter: interpreter.c program.c machine.c map.c list.c str.c
-	$(COMPILER) $(FLAGS) interpreter.c program.c machine.c map.c list.c str.c -o interpreter
+	$(CC) $(FLAGS) $^ -o $@
 
 tests: tests_list tests_map
 
 tests_list: tests_list.c list.c
-	$(COMPILER) $(FLAGS) tests_list tests_list.c list.c
+	$(CC) $(FLAGS) $^ -o $@
 
 tests_map: tests_map.c map.c list.c
-	$(COMPILER) $(FLAGS) tests_map tests_map.c map.c list.c
+	$(CC) $(FLAGS) $^ -o $@
