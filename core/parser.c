@@ -35,17 +35,7 @@ NUMBER      ::= [0-9]+
 // Headers.
 // ======================================================================
 
-#include <ctype.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-#include "str.h"
-#include "map.h"
-#include "list.h"
-
-#include "program.h"
+#include "parser.h"
 
 
 // Some handy macros.
@@ -543,7 +533,7 @@ static inline int count_states (DATA * data)
 // Public functions.
 // ======================================================================
 
-Program *Parse_Program (Str *string)
+Program *Parser_ProgFromString (Str *string)
 {
 
    // Ready the parser.
@@ -570,6 +560,41 @@ Program *Parse_Program (Str *string)
 
 }
 
+Program *Parser_ProgFromFile (Str *fname_str)
+{
+
+   // Get filename, check it exists.
+   char *fname = Str_Guts(fname_str);
+   if (access(fname, F_OK) == -1) goto IOerr;
+
+   // Open file, figure out length of buffer.
+   char *buffer = NULL;
+   long length;
+   FILE *f = fopen (fname, "rb");
+   if (!f) goto IOerr;
+   fseek(f, 0, SEEK_END);
+   length = ftell(f);
+   fseek(f, 0, SEEK_SET);
+   buffer = malloc (length + 1);
+   if (!buffer) goto IOerr;
+
+   // Copy file contents into a string and parse the program.
+   fread (buffer, sizeof(char), length, f);
+   buffer[length] = '\0';
+   Str *source_code = Str_Make(buffer);
+   Program *prog = Parser_ProgFromString(source_code);
+
+   // Cleanup and return.
+   free(buffer);
+   Str_Free(source_code);
+   return prog;
+
+   // Error handling.
+   IOerr:
+      return NULL;
+
+}
+
 
 
 // Main.
@@ -583,30 +608,12 @@ int main (int argc, char **argv)
       printf("Usage: ./parser <fpath>\n");
       return 0;
    }
-   
-   // Check file exists.
-   if (access(argv[1], F_OK) == -1)
-      goto IOerr;
-      
-   // Open file, figure out length of buffer.
-   char *buffer = NULL;
-   long length;
-   FILE *f = fopen (argv[1], "rb");
-   if (!f) goto IOerr;
-   fseek(f, 0, SEEK_END);
-   length = ftell(f);
-   fseek(f, 0, SEEK_SET);
-   buffer = malloc (length + 1);
-   if (!buffer) goto IOerr;
-   
-   // Read file contents into buffer. Make string.
-   fread (buffer, sizeof(char), length, f);
-   buffer[length] = '\0';
-   Str *prog_text = Str_Make(buffer);
-  
-   // Do parsing.
-   Program *prog = Parse_Program(prog_text);
-  
+
+   // Get filename, parse contents.   
+   Str *fname = Str_Make(argv[1]);
+   Program *prog = Parser_ProgFromFile(fname);
+   Str_Free(fname);
+
    // Extract parsing details.
    Str *name_s = Prog_Name(prog);
    Str *init_state_s = Prog_InitState(prog);
@@ -629,13 +636,8 @@ int main (int argc, char **argv)
    // Tear down everything.
    free(name_s); free(init_state_s);
    free(name); free(init_state);
-   Str_Free(prog_text);
    Prog_Free(prog);
    return 0;
-
-   IOerr:
-      printf("Error reading file: %s\n", argv[1]);
-      return 1;
 
 }
 
