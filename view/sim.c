@@ -7,13 +7,19 @@
 #define COL_TEXT_DEAD 3
 #define COL_BORDER 4
 
-typedef 
+typedef void (*DRAWER)(WINDOW *window);
 
 struct gui {
    WINDOW **windows;
+   DRAWER *drawers;
+   int num_windows;
 };
 
 typedef struct gui GUI;
+
+void draw_menu (WINDOW *window);
+void draw_prog (WINDOW *window);
+void draw_sim (WINDOW *window);
 
 void init_gui (struct gui *GUI)
 {  
@@ -39,47 +45,105 @@ void init_gui (struct gui *GUI)
    /** Set up windows. **/
    int width, height;
    getmaxyx(stdscr, height, width);
-   GUI->windows = malloc (sizeof (WINDOW) * 3);
+   GUI->num_windows = 3;
+
+   /** Make the windows. **/
+   GUI->windows = malloc (sizeof (WINDOW) * GUI->num_windows);
    GUI->windows[0] = newwin(height / 2, width / 2 , 0, 0);
    GUI->windows[1] = newwin(height / 2, width / 2, 0, width / 2);
-   GUI->windows[2] = newwin(height / 2, width, 0 
+   GUI->windows[2] = newwin(height / 2, width, height / 2, 0);
+
+   /** Give them drawing functions. **/
+   GUI->drawers = malloc (sizeof (DRAWER) * GUI->num_windows);
+   GUI->drawers[0] = &draw_menu;
+   GUI->drawers[1] = &draw_prog;
+   GUI->drawers[2] = &draw_sim;
+
 }
 
 void draw_menu (WINDOW *window)
 {
-   char *menu[3];
-   menu[0] = "hello, world!";
-   menu[1] = "run the game";
-   menu[2] = "fucks sake";
+   int num_items = 6;
+   char *menu[num_items];
+
+   menu[0] = "Load Machine";
+   menu[1] = "Step";
+   menu[2] = "Run Machine";
+   menu[3] = "Simulation Speed";
+   menu[4] = "Reset Machine";
+   menu[5] = "Exit Program";
+   
    int i;
-   for (i=0; i < 3; i++) {
-      mvwprintw(GUI->window, 5 + i, 5, menu[i]);
+   for (i=0; i < num_items; i++) {
+      mvwprintw(window, 5 + i, 5, menu[i]);
    }
 }
 
-void gui_borders (GUI *gui)
+void draw_prog (WINDOW *window)
 {
+}
+
+void draw_sim (WINDOW *window)
+{
+}
+
+void gui_draw (GUI *gui)
+{
+
+   // Drawing parameters.
    WINDOW **windows = gui->windows;
-   for (int i = 0; i < 3; i++) {
-      wattron(windows[i], COLOR_PAIR(col_value))
-      wborder(window, '|', '|', '-', '-', '+', '+', '+', '+');
-      wattroff(windows[i], COLOR_PAIR(col_value));
+   DRAWER *drawers = gui->drawers;
+   int num_windows = gui->num_windows;
+
+   // Iterator.
+   int i;
+
+   // Draw each window.
+   for (i = 0; i < num_windows; i++) {
+      DRAWER window_drawer = drawers[i];
+      (*window_drawer)(windows[i]);
    }
+
+   // Draw borders.
+   for (i = 0; i < 3; i++) {
+      wattron(windows[i], COLOR_PAIR(COL_BORDER));
+      wborder(windows[i], '|', '|', '-', '-', '+', '+', '+', '+');
+      wattroff(windows[i], COLOR_PAIR(COL_BORDER));
+   }
+
+   // Refresh each window.
+   for (i = 0; i < 3; i++) {
+      wrefresh(windows[i]);   
+   }
+
 }
 
-void end_gui (struct gui *gui)
+void end_gui (GUI *gui)
 {
-   wclear(gui->window);
-   delwin(gui->window);
+
+   int i;
+   for (i=0; i < gui->num_windows; i++) {
+      wclear(gui->windows[i]);
+      delwin(gui->windows[i]);   
+   }
+
+   free(gui->windows);
+   free(gui->drawers);
+   free(gui);
    endwin();
 }
 
 int main (int argc, char **argv)
 {
 
-   struct gui *GUI = malloc(sizeof(struct gui));
-   init_gui(GUI);
-  
+   GUI *gui = malloc(sizeof(struct gui));
+   init_gui(gui);
+
+   while (1) {
+      gui_draw(gui);
+   }
+
+   end_gui(gui);
    getch();
    return 0;
 }
