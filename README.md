@@ -25,6 +25,20 @@ WORD        ::= [a-zA-Z]+
 NUMBER      ::= [0-9]+
 ```
 
+Building
+========
+
+To build and run the simulation, type:
+```bash
+make sim
+./sim
+```
+
+To build the tests, type:
+```bash
+make tests
+```
+
 Libraries
 =========
 This project uses the MU unit testing library:
