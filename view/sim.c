@@ -1,16 +1,22 @@
 
 #include "sim.h"
+#include <string.h>
 
 #define COL_TEXT_ALIVE 1
 #define COL_TEXT_ACTIVE 2
 #define COL_TEXT_DEAD 3
+#define COL_BORDER 4
+
+typedef 
 
 struct gui {
-   WINDOW *window;
+   WINDOW **windows;
 };
 
+typedef struct gui GUI;
+
 void init_gui (struct gui *GUI)
-{
+{  
 
    /** Setup ncurses **/
    initscr(); // establish ncurses.
@@ -24,13 +30,41 @@ void init_gui (struct gui *GUI)
       fprintf(stderr, "No colour--exiting program\n");
       abort();   
    }
+   start_color();
    init_pair(COL_TEXT_ALIVE, COLOR_WHITE, COLOR_BLACK);
    init_pair(COL_TEXT_ACTIVE, COLOR_GREEN, COLOR_BLACK);
    init_pair(COL_TEXT_DEAD, COLOR_RED, COLOR_BLACK);
+   init_pair(COL_BORDER, COLOR_YELLOW, COLOR_BLACK);
 
-   /** Set up GUI. **/
-   GUI->window = newwin(30, 30, 0, 0);
+   /** Set up windows. **/
+   int width, height;
+   getmaxyx(stdscr, height, width);
+   GUI->windows = malloc (sizeof (WINDOW) * 3);
+   GUI->windows[0] = newwin(height / 2, width / 2 , 0, 0);
+   GUI->windows[1] = newwin(height / 2, width / 2, 0, width / 2);
+   GUI->windows[2] = newwin(height / 2, width, 0 
+}
 
+void draw_menu (WINDOW *window)
+{
+   char *menu[3];
+   menu[0] = "hello, world!";
+   menu[1] = "run the game";
+   menu[2] = "fucks sake";
+   int i;
+   for (i=0; i < 3; i++) {
+      mvwprintw(GUI->window, 5 + i, 5, menu[i]);
+   }
+}
+
+void gui_borders (GUI *gui)
+{
+   WINDOW **windows = gui->windows;
+   for (int i = 0; i < 3; i++) {
+      wattron(windows[i], COLOR_PAIR(col_value))
+      wborder(window, '|', '|', '-', '-', '+', '+', '+', '+');
+      wattroff(windows[i], COLOR_PAIR(col_value));
+   }
 }
 
 void end_gui (struct gui *gui)
@@ -43,29 +77,9 @@ void end_gui (struct gui *gui)
 int main (int argc, char **argv)
 {
 
-   struct gui *GUI = malloc(sizeof (struct gui));
-
+   struct gui *GUI = malloc(sizeof(struct gui));
    init_gui(GUI);
-
-   char *button_names[5];
-   button_names[0] = "load";
-   button_names[1] = "inputs";
-   button_names[2] = "step";
-   button_names[3] = "speed";
-   button_names[4] = "run";
-
-   while (1) {
-      int i;
-      for (i=0 ; i < 5 ; i++) {
-         wattron(GUI->window, COL_TEXT_ALIVE);
-         mvwprintw(GUI->window, 10 + i, 10, button_names[i]);
-      }
-      wrefresh(GUI->window);
-   }
-
-   printf("%s\n", button_names[0]);
-
-   end_gui(GUI);
-
+  
+   getch();
    return 0;
 }
