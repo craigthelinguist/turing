@@ -28,10 +28,16 @@ NUMBER      ::= [0-9]+
 Building
 ========
 
-To build and run the simulation, type:
+Build and run the simulation like so:
+
 ```bash
 make sim
-./sim
+./sim <prog-location> <prog-args>
+```
+
+For example, the program successor.tm takes one argument, so you can run it like this:
+```bash
+./sim programs/succesor.tm 4
 ```
 
 To build the tests, type:
