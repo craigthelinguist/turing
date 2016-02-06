@@ -1,5 +1,6 @@
 
 #include "sim.h"
+#include <stdlib.h>
 #include <string.h>
 
 #define COL_TEXT_ALIVE 1
@@ -136,6 +137,58 @@ void end_gui (GUI *gui)
 int main (int argc, char **argv)
 {
 
+   // Check for correct number of arguments.
+   if (argc < 2) {
+      fprintf(stderr, "Usage: sim.c <prog> <args>\n");
+      return 1;
+   }
+   
+   // Get filename, parse contents.
+   Str *fname = Str_Make(argv[1]);
+   Program *prog = Parser_ProgFromFile(fname);
+   Str_Free(fname);
+   
+   // Check we have correct number of inputs to program.
+   int num_inputs = Prog_NumInputs(prog);
+   if (argc - 2 != num_inputs) {
+      fprintf(stderr, "Error: expected %d input(s) but received %d.\n", num_inputs, argc - 2);
+      Prog_Free(prog);
+      return 2;
+   }
+   
+   // Load the inputs to the program.
+   int inputs[num_inputs];
+   int i;
+   for (i = 2; i < 2 + num_inputs; i++) {
+   
+      // Check that this is a number.
+      int k;
+      for (k = 0; argv[i][k] != '\0'; k++) {
+         if (!isdigit(argv[i][k])) {
+            fprintf(stderr, "Error: the argument \"%s\" is not a number.\n", argv[i]);
+            Prog_Free(prog);
+            return 3;
+         }
+      }
+      
+      // Convert char * to number and load into inputs array.
+      inputs[i-2] = atoi(argv[i]);
+   }
+   
+   // Construct the turing machine.
+   
+   // Tear down everything.
+   Machine *machine = M_Make();
+   
+   
+   Prog_Free(prog);
+   M_Del(machine);
+   
+   fprintf(stderr, "done\n");
+   return 0;
+   
+   
+   /*
    GUI *gui = malloc(sizeof(struct gui));
    init_gui(gui);
 
@@ -146,4 +199,6 @@ int main (int argc, char **argv)
    end_gui(gui);
    getch();
    return 0;
+   */
+   
 }
