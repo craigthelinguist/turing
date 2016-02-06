@@ -1,7 +1,5 @@
 
 #include "sim.h"
-#include <stdlib.h>
-#include <string.h>
 
 #define COL_TEXT_ALIVE 1
 #define COL_TEXT_ACTIVE 2

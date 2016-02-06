@@ -1,11 +1,4 @@
 
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "str.h"
-#include "map.h"
 #include "program.h"
 
 
