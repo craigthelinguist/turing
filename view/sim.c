@@ -174,11 +174,9 @@ int main (int argc, char **argv)
    }
    
    // Construct the turing machine.
+   Machine *machine = M_Make(inputs, num_inputs);
    
    // Tear down everything.
-   Machine *machine = M_Make();
-   
-   
    Prog_Free(prog);
    M_Del(machine);
    

@@ -18,7 +18,7 @@
    typedef enum { M_LEFT, M_RIGHT, M_PRINT, M_ERR } Action;
 
       /** Functions for allocating/freeing machines. **/
-   Machine *M_Make (void);
+   Machine *M_Make (int *inputs, int num_inputs);
    void M_Del (Machine *m);
 
       /** Write the specified character onto the cell underneath the head of
@@ -33,5 +33,18 @@
 
       /** Move the head of the machine to the left by one cell. **/
    void M_MvLeft (Machine *m);
+
+
+
+void
+M_Print (struct machine *m);
+
+
+
+
+
+
+
+
 
 #endif

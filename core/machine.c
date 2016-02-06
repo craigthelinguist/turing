@@ -7,9 +7,11 @@
 
 #define TAPE_SIZE 100
 
+#define CHAR_CODE_BLANK 0
+#define CHAR_CODE_1 49
 
 struct tape {
-   char cells[TAPE_SIZE];
+   char *cells;
    struct tape *prev;
    struct tape *next;
 };
@@ -33,12 +35,29 @@ void Tape_Del (struct tape *);
 // ============================================================
 
 struct machine *
-M_Make (void)
+M_Make (int *inputs, int num_inputs)
 {
+
+   // Make the struct representing the machine.
    struct machine *m = malloc(sizeof (struct machine));
    m->head = (int) (TAPE_SIZE/2); // Put in middle of tape.
    m->leftmost = Tape_Make();
    m->current = m->leftmost;
+
+   // Write the inputs to the tape.
+   int i;
+   for (i=0; i < num_inputs; i++) {
+      int k;
+      for (k=0; k < inputs[i]; k++) {
+         M_Write(m, CHAR_CODE_1);
+         M_MvRight(m);
+      }
+      M_MvRight(m);
+   }
+
+   // Reset the head, clean up.
+   m->current = m->leftmost;
+   m->head = (int) (TAPE_SIZE/2);
    return m;
 }
 
@@ -59,7 +78,6 @@ M_Del (struct machine *m)
    m->current = NULL;
    free(m);
 
-
 }
 
 struct tape *
@@ -67,6 +85,7 @@ Tape_Make () {
    struct tape *tape = malloc(sizeof (struct tape));
    tape->prev = NULL;
    tape->next = NULL;
+   tape->cells = calloc(sizeof(char), TAPE_SIZE);
    return tape;
 }
 
@@ -74,6 +93,7 @@ void
 Tape_Del (struct tape *tape) {
    tape->prev = NULL;
    tape->next = NULL;
+   free(tape->cells);
    free(tape);
 }
 
@@ -102,6 +122,7 @@ M_MvRight (struct machine *m) {
       m->current->next = next_tape;
       m->current = next_tape;
    }
+   m->head = head;
 }
 
 void
@@ -113,7 +134,12 @@ M_MvLeft (struct machine *m) {
       m->current->prev = prev_tape;
       m->current = prev_tape;
    }
+   m->head = head;
 }
+
+
+
+
 
 
 
