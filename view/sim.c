@@ -6,21 +6,21 @@
 #define COL_TEXT_DEAD 3
 #define COL_BORDER 4
 
-typedef void (*DRAWER)(WINDOW *window);
+#define KEY_ESC 27
 
 struct gui {
-   WINDOW **windows;
-   DRAWER *drawers;
-   int num_windows;
+   WINDOW *menu;
+   WINDOW *tape;
+   Machine *machine;
 };
 
 typedef struct gui GUI;
 
-void draw_menu (WINDOW *window);
-void draw_prog (WINDOW *window);
-void draw_sim (WINDOW *window);
+void init_gui (GUI *gui, Machine *m);
+void draw_menu (GUI *gui);
+void draw_tape (GUI *gui);
 
-void init_gui (struct gui *GUI)
+void init_gui (GUI *gui, Machine *m)
 {  
 
    /** Setup ncurses **/
@@ -44,90 +44,64 @@ void init_gui (struct gui *GUI)
    /** Set up windows. **/
    int width, height;
    getmaxyx(stdscr, height, width);
-   GUI->num_windows = 3;
 
    /** Make the windows. **/
-   GUI->windows = malloc (sizeof (WINDOW) * GUI->num_windows);
-   GUI->windows[0] = newwin(height / 2, width / 2 , 0, 0);
-   GUI->windows[1] = newwin(height / 2, width / 2, 0, width / 2);
-   GUI->windows[2] = newwin(height / 2, width, height / 2, 0);
+   gui->menu = newwin(height / 2, width, 0, 0);
+   gui->tape = newwin(height / 2, width, height / 2, 0);
 
-   /** Give them drawing functions. **/
-   GUI->drawers = malloc (sizeof (DRAWER) * GUI->num_windows);
-   GUI->drawers[0] = &draw_menu;
-   GUI->drawers[1] = &draw_prog;
-   GUI->drawers[2] = &draw_sim;
+   /** Associate gui with a machine. **/
+   gui->machine = m;
 
 }
 
-void draw_menu (WINDOW *window)
+void draw_menu (GUI *gui)
 {
-   int num_items = 6;
-   char *menu[num_items];
 
-   menu[0] = "Load Machine";
-   menu[1] = "Step";
-   menu[2] = "Run Machine";
-   menu[3] = "Simulation Speed";
-   menu[4] = "Reset Machine";
-   menu[5] = "Exit Program";
-   
+   // Get the window.
+   WINDOW *window = gui->menu;
+
+   // The menu is an array.
+   int num_items = 2;
+   char *menu[num_items];
+   menu[0] = "Step";
+   menu[1] = "Run";
+
+   // Draw the menu.
    int i;
    for (i=0; i < num_items; i++) {
       mvwprintw(window, 5 + i, 5, menu[i]);
    }
+
 }
 
-void draw_prog (WINDOW *window)
-{
-}
-
-void draw_sim (WINDOW *window)
+void draw_tape (GUI *gui)
 {
 }
 
 void gui_draw (GUI *gui)
 {
 
-   // Drawing parameters.
-   WINDOW **windows = gui->windows;
-   DRAWER *drawers = gui->drawers;
-   int num_windows = gui->num_windows;
-
-   // Iterator.
-   int i;
+   // Clear each window.
+   wclear(gui->menu);
+   wclear(gui->tape);
 
    // Draw each window.
-   for (i = 0; i < num_windows; i++) {
-      DRAWER window_drawer = drawers[i];
-      (*window_drawer)(windows[i]);
-   }
-
-   // Draw borders.
-   for (i = 0; i < 3; i++) {
-      wattron(windows[i], COLOR_PAIR(COL_BORDER));
-      wborder(windows[i], '|', '|', '-', '-', '+', '+', '+', '+');
-      wattroff(windows[i], COLOR_PAIR(COL_BORDER));
-   }
+   draw_menu(gui);
+   draw_tape(gui);
 
    // Refresh each window.
-   for (i = 0; i < 3; i++) {
-      wrefresh(windows[i]);   
-   }
+   wrefresh(gui->menu);
+   wrefresh(gui->tape);
 
 }
 
 void end_gui (GUI *gui)
 {
+   wclear(gui->menu);
+   wclear(gui->tape);
+   delwin(gui->menu);
+   delwin(gui->tape);
 
-   int i;
-   for (i=0; i < gui->num_windows; i++) {
-      wclear(gui->windows[i]);
-      delwin(gui->windows[i]);   
-   }
-
-   free(gui->windows);
-   free(gui->drawers);
    free(gui);
    endwin();
 }
@@ -165,7 +139,6 @@ int main (int argc, char **argv)
       return 2;
    }
 
-
    // Load the inputs to the program.
    int inputs[num_inputs];
    int i;
@@ -185,15 +158,24 @@ int main (int argc, char **argv)
       inputs[i-2] = atoi(argv[i]);
    }
    
-
-   // Construct the turing machine.
+   // Construct the turing machine and the gui.
    Machine *machine = M_Make(inputs, num_inputs);
+   GUI *gui = malloc(sizeof(GUI));
+   init_gui(gui, machine);
+
+   while (1) {
    
+      // Draw and process user input.
+      gui_draw(gui);   
+      int input = getch();
+      if (input == KEY_ESC) break;
+
+   }
+
    // Tear down everything.
+   end_gui(gui);
    Prog_Free(prog);
    M_Del(machine);
-   
-   fprintf(stderr, "done\n");
    return 0;
 
 }
