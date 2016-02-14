@@ -554,9 +554,9 @@ Program *Parser_ProgFromString (Str *string)
    // validate_program(data->prog);
    
    // Free stuff.
+   Program *prog = data->prog;
    free(data);
-
-   return data->prog;
+   return prog;
 
 }
 
@@ -565,7 +565,8 @@ Program *Parser_ProgFromFile (Str *fname_str)
 
    // Get filename, check it exists.
    char *fname = Str_Guts(fname_str);
-   if (access(fname, F_OK) == -1) goto IOerr;
+   if (access(fname, F_OK) == -1)
+      goto IOerr;
 
    // Open file, figure out length of buffer.
    char *buffer = NULL;
@@ -589,7 +590,6 @@ Program *Parser_ProgFromFile (Str *fname_str)
    Str_Free(source_code);
    return prog;
 
-   // Error handling.
    IOerr:
       return NULL;
 

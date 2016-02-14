@@ -144,16 +144,28 @@ int main (int argc, char **argv)
    // Get filename, parse contents.
    Str *fname = Str_Make(argv[1]);
    Program *prog = Parser_ProgFromFile(fname);
+
+   // Parse file, checking for an IO error.
+   if (prog == NULL) {
+      char *s = Str_Guts(fname);
+      fprintf(stderr, "Error reading file: %s\n", s);
+      free(s);
+      return 1;
+   }
+
+   // Free the file name.
    Str_Free(fname);
    
    // Check we have correct number of inputs to program.
    int num_inputs = Prog_NumInputs(prog);
+   
    if (argc - 2 != num_inputs) {
       fprintf(stderr, "Error: expected %d input(s) but received %d.\n", num_inputs, argc - 2);
       Prog_Free(prog);
       return 2;
    }
-   
+
+
    // Load the inputs to the program.
    int inputs[num_inputs];
    int i;
@@ -173,6 +185,7 @@ int main (int argc, char **argv)
       inputs[i-2] = atoi(argv[i]);
    }
    
+
    // Construct the turing machine.
    Machine *machine = M_Make(inputs, num_inputs);
    
@@ -182,19 +195,5 @@ int main (int argc, char **argv)
    
    fprintf(stderr, "done\n");
    return 0;
-   
-   
-   /*
-   GUI *gui = malloc(sizeof(struct gui));
-   init_gui(gui);
 
-   while (1) {
-      gui_draw(gui);
-   }
-
-   end_gui(gui);
-   getch();
-   return 0;
-   */
-   
 }

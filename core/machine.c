@@ -137,9 +137,3 @@ M_MvLeft (struct machine *m) {
    m->head = head;
 }
 
-
-
-
-
-
-
