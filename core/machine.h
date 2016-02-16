@@ -34,7 +34,8 @@
       /** Move the head of the machine to the left by one cell. **/
    void M_MvLeft (Machine *m);
 
-
+      /** Get the symbol on the tape at the head, with the specified offset. **/
+   char M_CharAtHead (Machine *m, int offset);
 
 void
 M_Print (struct machine *m);

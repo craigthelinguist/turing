@@ -97,7 +97,55 @@ Tape_Del (struct tape *tape) {
    free(tape);
 }
 
+char
+M_CharAtHead (struct machine *m, int offset)
+{
+   struct tape *current = m->current;
+   int myhead = m->head;
 
+   while (offset != 0) {
+
+      // Symbol is left of head.
+      if (offset < 0) {
+         
+         // Move onto next tape to the left.
+         if (myhead == 0) {
+            if (current->prev == NULL) {
+               return CHAR_CODE_BLANK;
+            }
+            else {
+               current = current->prev;
+               myhead = TAPE_SIZE - 1;            
+            }       
+         }
+  
+         // Else move left one.
+         else { myhead--; }
+      }
+
+      // Symbol is right of head.
+      else {
+         
+         // Move onto next tape to the right.
+         if (myhead == TAPE_SIZE - 1) {
+            if (current->next == NULL) {
+               return CHAR_CODE_BLANK;
+            }
+            else {
+               current = current->next;
+               myhead = 0;
+            }         
+         }
+
+         // Else move right one.
+         else { myhead++; }
+
+      }
+   }
+
+   return current->cells[myhead];
+
+}
 
 // Machine instructions.
 // ============================================================
