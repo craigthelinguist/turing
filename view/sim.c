@@ -99,8 +99,6 @@ void draw_tape (GUI *gui)
       mvwaddch(w, 3, i, '-');   
    }
 
-   FILE *log = fopen ("log", "wb");
-
    // Draw contents of tape left of the head.
    int offset = 0;
    int should_draw = 1;
@@ -110,7 +108,6 @@ void draw_tape (GUI *gui)
          mvwaddch(w, 2, i, c);         
          offset--;
          should_draw = 0;
-         fprintf(log, "offset %d: %c\n", i, c);
       }
       else {
          should_draw = 1;
@@ -127,7 +124,6 @@ void draw_tape (GUI *gui)
          mvwaddch(w, 2, i, c);         
          offset++;
          should_draw = 0;
-         fprintf(log, "offset %d: %c\n", i, c);
       }
       else {
          should_draw = 1;
@@ -135,7 +131,6 @@ void draw_tape (GUI *gui)
       }
    }
 
-   fclose(log);
 
 }
 
@@ -218,12 +213,13 @@ int main (int argc, char **argv)
       // Convert char * to number and load into inputs array.
       inputs[i-2] = atoi(argv[i]);
    }
-   
+
+
    // Construct the turing machine and the gui.
    Machine *machine = M_Make(inputs, num_inputs);
    GUI *gui = malloc(sizeof(GUI));
    init_gui(gui, machine);
-
+   
    while (1) {
    
       // Draw and process user input.
@@ -237,6 +233,8 @@ int main (int argc, char **argv)
    end_gui(gui);
    Prog_Free(prog);
    M_Del(machine);
+
    return 0;
+
 
 }

@@ -85,7 +85,11 @@ Tape_Make () {
    struct tape *tape = malloc(sizeof (struct tape));
    tape->prev = NULL;
    tape->next = NULL;
-   tape->cells = calloc(sizeof(char), TAPE_SIZE);
+   tape->cells = malloc(sizeof(char) * TAPE_SIZE);
+   int i;
+   for (i = 0; i < TAPE_SIZE; i++) {
+      tape->cells[i] = CHAR_CODE_BLANK;
+   }
    return tape;
 }
 
@@ -115,12 +119,16 @@ M_CharAtHead (struct machine *m, int offset)
             }
             else {
                current = current->prev;
-               myhead = TAPE_SIZE - 1;            
+               myhead = TAPE_SIZE - 1;      
+               offset--;      
             }       
          }
   
          // Else move left one.
-         else { myhead--; }
+         else {
+            myhead--;
+            offset--;
+         }
       }
 
       // Symbol is right of head.
@@ -134,11 +142,15 @@ M_CharAtHead (struct machine *m, int offset)
             else {
                current = current->next;
                myhead = 0;
+               offset--;
             }         
          }
 
          // Else move right one.
-         else { myhead++; }
+         else {
+            myhead++;
+            offset--;
+         }
 
       }
    }
