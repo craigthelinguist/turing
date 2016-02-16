@@ -566,7 +566,7 @@ Program *Parser_ProgFromFile (Str *fname_str)
    // Get filename, check it exists.
    char *fname = Str_Guts(fname_str);
    if (access(fname, F_OK) == -1)
-      goto IOerr;
+      goto FNFerr;
 
    // Open file, figure out length of buffer.
    char *buffer = NULL;
@@ -588,9 +588,14 @@ Program *Parser_ProgFromFile (Str *fname_str)
    // Cleanup and return.
    free(buffer);
    Str_Free(source_code);
+   fclose(f);
    return prog;
 
+   FNFerr:
+      return NULL;
+
    IOerr:
+      fclose(f);
       return NULL;
 
 }

@@ -68,14 +68,75 @@ void draw_menu (GUI *gui)
 
    // Draw the menu.
    int i;
+
+   int offset_top = 2;
+   int offset_left = 3;
+
    for (i=0; i < num_items; i++) {
-      mvwprintw(window, 5 + i, 5, menu[i]);
+      mvwprintw(window, offset_top + i, offset_left, menu[i]);
    }
 
 }
 
 void draw_tape (GUI *gui)
 {
+
+   // Get data structures for drawing.
+   WINDOW *w = gui->tape;
+   Machine *m = gui->machine;
+
+   // Get dimensions of window.
+   int rows, cols;
+   getmaxyx(w, rows, cols);
+
+   // Draw the head.
+   mvwaddch(w, 0, cols/2, 'v');
+  
+   // Draw the top & bottom of the tape.
+   int i;
+   for (i=0; i < cols; i++) {
+      mvwaddch(w, 1, i, '-');
+      mvwaddch(w, 3, i, '-');   
+   }
+
+   FILE *log = fopen ("log", "wb");
+
+   // Draw contents of tape left of the head.
+   int offset = 0;
+   int should_draw = 1;
+   for (i=cols/2; i >= 0; i--) {
+      if (should_draw == 1) {
+         char c = M_CharAtHead(m, offset);
+         mvwaddch(w, 2, i, c);         
+         offset--;
+         should_draw = 0;
+         fprintf(log, "offset %d: %c\n", i, c);
+      }
+      else {
+         should_draw = 1;
+         mvwaddch(w, 2, i, '|');
+      }
+   }
+
+   // Draw contents of tape right of the head.
+   offset = 0;
+   should_draw = 1;
+   for (i=cols/2; i < cols; i++) {
+      if (should_draw == 1) {
+         char c = M_CharAtHead(m, offset);
+         mvwaddch(w, 2, i, c);         
+         offset++;
+         should_draw = 0;
+         fprintf(log, "offset %d: %c\n", i, c);
+      }
+      else {
+         should_draw = 1;
+         mvwaddch(w, 2, i, '|');
+      }
+   }
+
+   fclose(log);
+
 }
 
 void gui_draw (GUI *gui)

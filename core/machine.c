@@ -7,7 +7,7 @@
 
 #define TAPE_SIZE 100
 
-#define CHAR_CODE_BLANK 0
+#define CHAR_CODE_BLANK 32
 #define CHAR_CODE_1 49
 
 struct tape {
