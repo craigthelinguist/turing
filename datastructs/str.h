@@ -16,6 +16,8 @@ int Str_Cmp (Str *str1, Str *str2);
 
 Str *Str_Make (char *contents);
 
+Str *Str_Copy (Str *other);
+
 void Str_Free (Str *str);
 
 char *Str_Guts (Str *str);

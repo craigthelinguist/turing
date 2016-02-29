@@ -10,10 +10,11 @@ Prog_Halted (struct machine *m, Program *prog, Str *state)
 }
 
 void
-Prog_Step (Machine *m, Program *prog, Str *state)
+Prog_Step (Machine *m, Program *prog)
 {
 
    // Check if you are in the halting state.
+   Str *state =  M_State(m);
    if (Prog_Halted(m, prog, state)) return;
    
    // Read input. Look up the appropriate instruction.
@@ -36,9 +37,8 @@ Prog_Step (Machine *m, Program *prog, Str *state)
          break;
    }
 
-   // Look up and perform transition.
-   if (state != NULL) {
-      state = Prog_NextTransition (prog, state, input);
-   }
+   // Look up and perform transition. Free memory.
+   if (state != NULL) M_NextState(m, prog, input); 
+   Str_Free(state);
 
 }

@@ -18,7 +18,7 @@ struct tape {
     when it needs to. **/
 struct machine {
    int head;
-   int state;
+   Str *state;
    struct tape *leftmost;
    struct tape *current;
 };
@@ -35,16 +35,15 @@ struct machine *
 M_Make (Program *prog, int *inputs)
 {
 
-   // Extract relevant info.
-   int num_inputs = Prog_NumInputs(prog);
-
    // Make the struct representing the machine.
    struct machine *m = malloc(sizeof (struct machine));
    m->head = (int) (TAPE_SIZE/2); // Put in middle of tape.
    m->leftmost = Tape_Make();
    m->current = m->leftmost;
+   m->state = Prog_InitState(prog);
 
    // Write the inputs to the tape.
+   int num_inputs = Prog_NumInputs(prog);
    int i;
    for (i=0; i < num_inputs; i++) {
       int k;
@@ -158,6 +157,21 @@ M_CharAtHead (struct machine *m, int offset)
    return current->cells[myhead];
 
 }
+
+void
+M_NextState (Machine *m, Program *prog, char input)
+{
+   if (m->state == NULL) return;
+   Str_Free(m->state);
+   m->state = Prog_NextTransition(prog, m->state, input);
+}
+
+Str *
+M_State (Machine *m)
+{
+   return Str_Copy(m->state);
+}
+
 
 // Machine instructions.
 // ============================================================

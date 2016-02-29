@@ -24,6 +24,12 @@
    Machine *M_Make (Program *prog, int *inputs);
    void M_Del (Machine *m);
 
+      /** Update machine state. **/
+   void M_NextState (Machine *m, Program *prog, char input);
+   
+      /** Return a copy of the machine's state. **/
+   Str *M_State (Machine *m);
+
       /** Write the specified character onto the cell underneath the head of
           the machine. **/
    void M_Write (Machine *m, char c);

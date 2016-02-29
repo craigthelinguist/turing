@@ -20,6 +20,7 @@ struct str {
 };
 
 static inline void out_of_bounds (void);
+char *Str_Guts(Str *s1);
 
 
 
@@ -59,6 +60,13 @@ Str *Str_Make (char *contents)
    str->chars = malloc(sizeof (char) * count);
    memcpy(str->chars, contents, sizeof (char) * count);
    return str;
+}
+
+Str *Str_Copy (Str *other)
+{
+   Str *s = malloc(Str_SizeOf());
+   memcpy(s, other, Str_SizeOf());
+   return s;
 }
 
 void Str_Free (Str *str)
