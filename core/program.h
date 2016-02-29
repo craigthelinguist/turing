@@ -25,8 +25,8 @@
 
    #include "str.h"
    #include "map.h"
+   #include "action.h"
    #include "program.h"
-   #include "machine.h"
 
 
 

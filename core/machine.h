@@ -7,6 +7,10 @@
 #ifndef MACHINE_H
 #define MACHINE_H
 
+   #include "action.h"
+   #include "program.h"
+   #include "stdlib.h"
+
    #define BLANK 32
 
    typedef struct machine Machine;
@@ -15,10 +19,9 @@
           below functions. M_ERR should be used to signify instructions that don't
           make sense (e.g. instructions issued after a program has halted, or when
           the program has not halted and there are no further instructions). **/
-   typedef enum { M_LEFT, M_RIGHT, M_PRINT, M_ERR } Action;
 
       /** Functions for allocating/freeing machines. **/
-   Machine *M_Make (int *inputs, int num_inputs);
+   Machine *M_Make (Program *prog, int *inputs);
    void M_Del (Machine *m);
 
       /** Write the specified character onto the cell underneath the head of
@@ -36,9 +39,6 @@
 
       /** Get the symbol on the tape at the head, with the specified offset. **/
    char M_CharAtHead (Machine *m, int offset);
-
-void
-M_Print (struct machine *m);
 
 
 

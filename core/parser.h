@@ -13,6 +13,7 @@
    #include "map.h"
    #include "list.h"
 
+   #include "machine.h"
    #include "program.h"
 
    /**

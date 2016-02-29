@@ -216,7 +216,7 @@ int main (int argc, char **argv)
 
 
    // Construct the turing machine and the gui.
-   Machine *machine = M_Make(inputs, num_inputs);
+   Machine *machine = M_Make(prog, inputs);
    GUI *gui = malloc(sizeof(GUI));
    init_gui(gui, machine);
    

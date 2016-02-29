@@ -1,9 +1,6 @@
 
 
-#include <stdlib.h>
-
 #include "machine.h"
-
 
 #define TAPE_SIZE 100
 
@@ -35,8 +32,11 @@ void Tape_Del (struct tape *);
 // ============================================================
 
 struct machine *
-M_Make (int *inputs, int num_inputs)
+M_Make (Program *prog, int *inputs)
 {
+
+   // Extract relevant info.
+   int num_inputs = Prog_NumInputs(prog);
 
    // Make the struct representing the machine.
    struct machine *m = malloc(sizeof (struct machine));
