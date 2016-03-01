@@ -1,22 +1,23 @@
 
-#include <stdlib.h>
-#include "map.h"
 #include "interpreter.h"
 
 int
-Prog_Halted (struct machine *m, Program *prog, Str *state)
+I_Halted (struct machine *m, Program *prog)
 {
-   return state == NULL || Str_EqIgnoreCase(state, "halt");
+   Str *state = M_State(m);
+   int hasHalted = state == NULL || Str_EqIgnoreCase(state, "halt");
+   Str_Free(state);
+   return hasHalted;
 }
 
 void
-Prog_Step (Machine *m, Program *prog)
+I_Step (Machine *m, Program *prog)
 {
 
    // Check if you are in the halting state.
+   if (I_Halted(m, prog)) return;
    Str *state =  M_State(m);
-   if (Prog_Halted(m, prog, state)) return;
-   
+
    // Read input. Look up the appropriate instruction.
    char input = M_Read(m);
    Instruction instr = Prog_NextInstruction(prog, state, input);
@@ -36,7 +37,6 @@ Prog_Step (Machine *m, Program *prog)
          M_Write(m, instr.output);
          break;
    }
-
    // Look up and perform transition. Free memory.
    if (state != NULL) M_NextState(m, prog, input); 
    Str_Free(state);

@@ -62,10 +62,12 @@ Str *Str_Make (char *contents)
    return str;
 }
 
-Str *Str_Copy (Str *other)
+Str *Str_Copy (Str *toCopy)
 {
    Str *s = malloc(Str_SizeOf());
-   memcpy(s, other, Str_SizeOf());
+   s->len = toCopy->len;
+   s->chars = malloc(sizeof(char) * s->len);
+   memcpy(s->chars, toCopy->chars, toCopy->len);
    return s;
 }
 

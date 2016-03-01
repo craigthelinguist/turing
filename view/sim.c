@@ -220,13 +220,16 @@ int main (int argc, char **argv)
    GUI *gui = malloc(sizeof(GUI));
    init_gui(gui, machine);
    
+
    while (1) {
    
       // Draw and process user input.
       gui_draw(gui);   
       int input = getch();
-      if (input == KEY_ESC) break;
 
+      if (input == KEY_RIGHT) I_Step(machine, prog);      
+      else if (input == KEY_ESC) break;
+      
    }
 
    // Tear down everything.

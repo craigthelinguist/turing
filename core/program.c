@@ -202,12 +202,13 @@ int Prog_NumStates (struct program *prog)
 Instruction Prog_NextInstruction (Program *prog, Str *state, char input)
 {
 
+
    // Check the state exists.
    if (!Map_Contains(prog->states, state)) {
       Instruction instr = { M_ERR, '\0' };
       return instr;
    }
-
+  
    // Look through clauses and return the appropriate instruction.
    struct clause **clauses = Map_Get(prog->states, state);
    int i;
@@ -316,7 +317,7 @@ void Map_FreeStr (void *s)
 int Map_CmpStr (void *v1, void *v2)
 {
    Str *s1 = v1;
-   Str *s2 = v2;
+   Str *s2 = v2;  
    if (Str_Len(s1) != Str_Len(s2))
       return 1;
    return Str_Cmp(s1, s2);
