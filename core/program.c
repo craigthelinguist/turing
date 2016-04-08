@@ -62,6 +62,7 @@ int Clause_SizeOf();
 void Map_FreeStr (void *s);
 int Map_CmpStr (void *v1, void *v2);
 void Map_FreeClauses (void *arr_clauses);
+unsigned int Map_HashStr (void *v1);
 
 
 
@@ -202,7 +203,6 @@ int Prog_NumStates (struct program *prog)
 Instruction Prog_NextInstruction (Program *prog, Str *state, char input)
 {
 
-
    // Check the state exists.
    if (!Map_Contains(prog->states, state)) {
       Instruction instr = { M_ERR, '\0' };
@@ -228,15 +228,17 @@ Str *Prog_NextTransition (Program *prog, Str *state, char input)
 {
    
    // Check the state exists.
-   if (!Map_Contains(prog->states, state))
+   if (!Map_Contains(prog->states, state)) {
       return NULL;
+   }
 
    // Look through clauses and return the appropriate instruction.
    struct clause **clauses = Map_Get(prog->states, state);
    int i;
    for (i=0; clauses[i] != '\0'; i++) {
       if (clauses[i]->input == input) {
-         return clauses[i]->end_state;      
+         Str *s = Str_Copy(clauses[i]->end_state);
+         return s;
       }   
    }
 
@@ -254,7 +256,7 @@ Program *Prog_Make (void)
    struct program *prog = malloc(Prog_SizeOf());
    prog->states = Map_Make (2,
                             Str_SizeOf(), sizeof(struct clause **),
-                            NULL, // hash function
+                            Map_HashStr, // hash function
                             Map_FreeStr, Map_CmpStr,
                             NULL, NULL);
    prog->name = NULL;
@@ -333,7 +335,22 @@ void Map_FreeClauses (void *arr_clauses)
    free(arr_clauses);
 }
 
+unsigned int Map_HashStr (void *v1)
+{
+   Str *s = (Str *)v1;
 
+   unsigned int hash = 5381;
+   char *chars = Str_Guts(s);
+   int i;
+   
+   for (i=0; chars[i] != '\0'; i++) {
+      char c = chars[i];
+      hash = ((hash << 5) + hash) + c;
+   }
+   
+   free(chars);
+   return hash;
+}
 
 
 
