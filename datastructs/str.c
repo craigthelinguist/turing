@@ -3,10 +3,6 @@
 // Headers.
 // ============================================================
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
 
 #include "str.h"
 
@@ -80,6 +76,7 @@ void Str_Free (Str *str)
 
 int Str_Cmp (Str *str1, Str *str2)
 {
+
    int minimum = str1->len < str2->len ? str1->len : str2->len;
    int maximum = str1->len < str2->len ? str2->len : str1->len;
    int difference = maximum - minimum;
@@ -92,7 +89,11 @@ int Str_Cmp (Str *str1, Str *str2)
 
 char *Str_Guts (Str *str)
 {
-   return str->chars;
+   char *s = malloc(Str_Len(str) + 1);
+   int len = Str_Len(str);
+   memcpy(s, str->chars, len);
+   s[len] = '\0';
+   return s;
 }
 
 int Str_ToInt (Str *str)
